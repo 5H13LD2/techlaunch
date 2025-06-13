@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechLaunch - Enrollments</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="dashboard.css" rel="stylesheet">
+    <style>
+        body {
+            overflow-x: hidden;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 1000;
+            padding-top: 20px;
+            background: #2c3e50;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 16.666667%;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                position: static;
+                height: auto;
+                margin-bottom: 20px;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="col-md-2 sidebar p-3">
+        <h4 class="text-white mb-4">TechLaunch</h4>
+        <nav class="nav flex-column">
+            <a class="nav-link" href="dashboard.html"><i class="fas fa-home me-2"></i>Dashboard</a>
+            <a class="nav-link" href="users.html"><i class="fas fa-users me-2"></i>Users</a>
+            <a class="nav-link" href="courses.html"><i class="fas fa-book me-2"></i>Courses</a>
+            <a class="nav-link active" href="enrollments.html"><i class="fas fa-user-graduate me-2"></i>Enrollments</a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="container-fluid px-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Enrollments Management</h2>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEnrollmentModal">
+                    <i class="fas fa-plus me-2"></i>New Enrollment
+                </button>
+            </div>
+
+            <!-- Enrollment Stats -->
+            <div class="row mb-4">
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="card stat-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-user-graduate stat-icon text-primary"></i>
+                            <h3 id="active-enrollments">0</h3>
+                            <p class="text-muted">Active Enrollments</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="card stat-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-check-circle stat-icon text-success"></i>
+                            <h3 id="completed-enrollments">0</h3>
+                            <p class="text-muted">Completed</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="card stat-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-clock stat-icon text-warning"></i>
+                            <h3 id="pending-enrollments">0</h3>
+                            <p class="text-muted">Pending</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-4">
+                    <div class="card stat-card h-100">
+                        <div class="card-body text-center">
+                            <i class="fas fa-chart-pie stat-icon text-info"></i>
+                            <h3 id="avg-completion">0%</h3>
+                            <p class="text-muted">Avg. Completion</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enrollments Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">All Enrollments</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Course</th>
+                                    <th>Enrollment Date</th>
+                                    <th>Progress</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="enrollments-table-body">
+                                <!-- Enrollment rows will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Enrollment Modal -->
+    <div class="modal fade" id="addEnrollmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">New Enrollment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addEnrollmentForm">
+                        <div class="mb-3">
+                            <label class="form-label">Student</label>
+                            <select class="form-select" id="studentSelect" required>
+                                <option value="">Select Student</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Course</label>
+                            <select class="form-select" id="courseSelect" required>
+                                <option value="">Select Course</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="createEnrollment()">Create Enrollment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="src/js/config.js"></script>
+    <script src="src/js/api.js"></script>
+    <script src="src/js/enrollments.js"></script>
+</body>
+</html> 

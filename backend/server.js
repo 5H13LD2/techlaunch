@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const FirestoreServices = require('./firestoreServices');
+const FirestoreServices = require('./services/firestoreServices');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -70,7 +70,6 @@ app.get('/api', (req, res) => {
 // Serve dashboard HTML
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/dashboard.html'));
-  //res.status(200).json({Hello :'world'})
 });
 
 // Get all users
@@ -106,6 +105,83 @@ app.get('/api/courses', asyncHandler(async (req, res) => {
       message: error.message,
       error: 'Failed to retrieve courses'
     });
+  }
+}));
+
+// Get all modules
+app.get('/api/modules', asyncHandler(async (req, res) => {
+  try {
+    const modules = await FirestoreServices.getAllModules();
+    res.json({ success: true, data: modules, count: modules.length });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
+// Get specific module by ID
+app.get('/api/modules/:moduleId', asyncHandler(async (req, res) => {
+  const { moduleId } = req.params;
+  try {
+    const module = await FirestoreServices.getModuleById(moduleId);
+    if (!module) {
+      return res.status(404).json({
+        success: false,
+        message: 'Module not found'
+      });
+    }
+    res.json({
+      success: true,
+      data: module
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      error: 'Failed to retrieve module'
+    });
+  }
+}));
+
+// Get modules for a specific course
+app.get('/api/courses/:courseId/modules', asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+  try {
+    const modules = await FirestoreServices.getModulesByCourseId(courseId);
+    res.json({ success: true, data: modules });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
+// Get all lessons
+app.get('/api/lessons', asyncHandler(async (req, res) => {
+  try {
+    const lessons = await FirestoreServices.getAllLessons();
+    res.json({ success: true, data: lessons });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
+// Get lessons for a specific module
+app.get('/api/modules/:moduleId/lessons', asyncHandler(async (req, res) => {
+  const { moduleId } = req.params;
+  try {
+    const lessons = await FirestoreServices.getLessonsByModuleId(moduleId);
+    res.json({ success: true, data: lessons });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+}));
+
+//  Optional: Get lessons by courseId + moduleId
+app.get('/api/courses/:courseId/modules/:moduleId/lessons', asyncHandler(async (req, res) => {
+  const { courseId, moduleId } = req.params;
+  try {
+    const lessons = await FirestoreServices.getLessonsByCourseAndModule(courseId, moduleId);
+    res.json({ success: true, data: lessons });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 }));
 
@@ -279,6 +355,43 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Debug endpoint to list all modules
+app.get('/api/debug/modules', asyncHandler(async (req, res) => {
+  try {
+    const modules = await FirestoreServices.debugListAllModules();
+    res.json({
+      success: true,
+      data: modules,
+      count: modules.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      error: 'Failed to list modules'
+    });
+  }
+}));
+
+// Migrate lessons to consistent structure
+app.post('/api/modules/:moduleId/migrate-lessons', asyncHandler(async (req, res) => {
+  const { moduleId } = req.params;
+  try {
+    const result = await FirestoreServices.migrateLessonsToConsistentStructure(moduleId);
+    res.json({
+      success: true,
+      message: result.message,
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+      error: 'Failed to migrate lessons'
+    });
+  }
+}));
+
 // Global error handler
 app.use((error, req, res, next) => {
   console.error('🔥 Global error handler:', error);
@@ -301,10 +414,12 @@ app.use('*', (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 TechLaunch server running on http://localhost:${PORT}`);
-  console.log(`📊 Dashboard available at http://localhost:${PORT}`);
-  console.log(`🔗 API endpoints available at http://localhost:${PORT}/api/`);
-  console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log('📝 Available endpoints:');
+  console.log('  GET  /api/modules');
+  console.log('  GET  /api/courses/:courseId/modules');
+  console.log('  GET  /api/modules/:moduleId/lessons');
+  console.log('  GET  /api/courses/:courseId/modules/:moduleId/lessons');
 });
 
 module.exports = app;
