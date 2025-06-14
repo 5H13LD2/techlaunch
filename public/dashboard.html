@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechLaunch Dashboard</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .card {
+            transition: transform 0.2s;
+            margin-bottom: 1rem;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .stat-card {
+            border-radius: 15px;
+            border: none;
+            background: linear-gradient(145deg, #ffffff, #f5f7fa);
+        }
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        .activity-item {
+            padding: 1rem;
+            border-left: 4px solid #007bff;
+            margin-bottom: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+        }
+        .sidebar {
+            min-height: 100vh;
+            background: #2c3e50;
+            color: white;
+        }
+        .nav-link {
+            color: rgba(255,255,255,0.8);
+            padding: 0.8rem 1rem;
+            margin: 0.2rem 0;
+            border-radius: 8px;
+        }
+        .nav-link:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+        .nav-link.active {
+            background: #007bff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar p-3">
+                <h4 class="text-white mb-4">TechLaunch</h4>
+                <nav class="nav flex-column">
+                    <a class="nav-link active" href="dashboard.html"><i class="fas fa-home me-2"></i>Dashboard</a>
+                    <a class="nav-link" href="users.html"><i class="fas fa-users me-2"></i>Users</a>
+                    <a class="nav-link" href="courses.html"><i class="fas fa-book me-2"></i>Courses</a>
+                    <a class="nav-link" href="enrollments.html"><i class="fas fa-user-graduate me-2"></i>Enrollments</a>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 p-4">
+                <h2 class="mb-4">Dashboard Overview</h2>
+                
+                <!-- Statistics Cards -->
+                <div class="row mb-4" id="stats-container">
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-users stat-icon text-primary"></i>
+                                <h3 class="total-users">0</h3>
+                                <p class="text-muted">Total Users</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-book stat-icon text-success"></i>
+                                <h3 class="total-courses">0</h3>
+                                <p class="text-muted">Total Courses</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-user-graduate stat-icon text-info"></i>
+                                <h3 class="total-enrollments">0</h3>
+                                <p class="text-muted">Total Enrollments</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-chart-line stat-icon text-warning"></i>
+                                <h3 class="completion-rate">0%</h3>
+                                <p class="text-muted">Completion Rate</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity and Users/Courses Tables -->
+                <div class="row">
+                    <!-- Recent Activity -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Recent Activity</h5>
+                            </div>
+                            <div class="card-body">
+                                <div id="activity-container">
+                                    <!-- Activity items will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Latest Users -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="card-title mb-0">Latest Users</h5>
+                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                                    <i class="fas fa-plus"></i> Add User
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Username</th>
+                                                <th>Email</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="users-table-body">
+                                            <!-- User rows will be populated here -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add User Modal -->
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addUserForm">
+                        <div class="mb-3">
+                            <label class="form-label">User ID</label>
+                            <input type="text" class="form-control" id="userId" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="createUser()">Add User</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // API Base URL
+        const API_BASE_URL = 'http://localhost:3001/api';
+
+        // Fetch dashboard statistics
+        async function fetchDashboardStats() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/dashboard/stats`);
+                const data = await response.json();
+                if (data.success) {
+                    document.querySelector('.total-users').textContent = data.data.totalUsers;
+                    document.querySelector('.total-courses').textContent = data.data.totalCourses;
+                    document.querySelector('.total-enrollments').textContent = data.data.totalEnrollments;
+                    
+                    // Calculate completion rate (example calculation)
+                    const completionRate = data.data.totalEnrollments > 0 
+                        ? Math.round((data.data.totalEnrollments / (data.data.totalUsers * data.data.totalCourses)) * 100)
+                        : 0;
+                    document.querySelector('.completion-rate').textContent = `${completionRate}%`;
+                }
+            } catch (error) {
+                console.error('Error fetching dashboard stats:', error);
+            }
+        }
+
+        // Fetch recent activity
+        async function fetchRecentActivity() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/dashboard/activity`);
+                const data = await response.json();
+                if (data.success) {
+                    const activityContainer = document.getElementById('activity-container');
+                    activityContainer.innerHTML = ''; // Clear existing content
+
+                    // Display recent users
+                    data.data.recentUsers.forEach(user => {
+                        const activityItem = document.createElement('div');
+                        activityItem.className = 'activity-item';
+                        activityItem.innerHTML = `
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>${user.username}</strong> joined
+                                    <div class="text-muted">${new Date(user.createdAt).toLocaleDateString()}</div>
+                                </div>
+                                <i class="fas fa-user-plus text-primary"></i>
+                            </div>
+                        `;
+                        activityContainer.appendChild(activityItem);
+                    });
+
+                    // Display recent courses
+                    data.data.recentCourses.forEach(course => {
+                        const activityItem = document.createElement('div');
+                        activityItem.className = 'activity-item';
+                        activityItem.innerHTML = `
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <strong>${course.courseName}</strong> was added
+                                    <div class="text-muted">${new Date(course.createdAt).toLocaleDateString()}</div>
+                                </div>
+                                <i class="fas fa-book text-success"></i>
+                            </div>
+                        `;
+                        activityContainer.appendChild(activityItem);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching recent activity:', error);
+            }
+        }
+
+        // Fetch users
+        async function fetchUsers() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/users`);
+                const data = await response.json();
+                if (data.success) {
+                    const tableBody = document.getElementById('users-table-body');
+                    tableBody.innerHTML = ''; // Clear existing content
+
+                    data.data.forEach(user => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${user.username}</td>
+                            <td>${user.email}</td>
+                            <td>
+                                <span class="badge bg-${user.isEnrolled ? 'success' : 'warning'}">
+                                    ${user.isEnrolled ? 'Enrolled' : 'Not Enrolled'}
+                                </span>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching users:', error);
+            }
+        }
+
+        // Create new user
+        async function createUser() {
+            const userId = document.getElementById('userId').value;
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/users`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ userId, username, email })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    // Close modal and refresh data
+                    bootstrap.Modal.getInstance(document.getElementById('addUserModal')).hide();
+                    document.getElementById('addUserForm').reset();
+                    await Promise.all([
+                        fetchDashboardStats(),
+                        fetchRecentActivity(),
+                        fetchUsers()
+                    ]);
+                } else {
+                    alert(data.message || 'Error creating user');
+                }
+            } catch (error) {
+                console.error('Error creating user:', error);
+                alert('Error creating user');
+            }
+        }
+
+        // Initial data load
+        async function loadDashboardData() {
+            await Promise.all([
+                fetchDashboardStats(),
+                fetchRecentActivity(),
+                fetchUsers()
+            ]);
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadDashboardData);
+
+        // Refresh data every 30 seconds
+        setInterval(loadDashboardData, 30000);
+    </script>
+</body>
+</html>
