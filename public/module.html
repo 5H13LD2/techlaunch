@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' http://localhost:3001 https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;">
+  <title>TechLaunch - Module Management</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="module.css">
+  <style>
+    .spinner-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid #f3f3f3;
+      border-top: 5px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .sidebar {
+      background-color: #2c3e50;
+      min-height: 100vh;
+    }
+    .sidebar .nav-link {
+      color: #ecf0f1;
+      padding: 0.5rem 1rem;
+      margin: 0.2rem 0;
+      border-radius: 0.25rem;
+    }
+    .sidebar .nav-link:hover {
+      background-color: #34495e;
+    }
+    .sidebar .nav-link.active {
+      background-color: #3498db;
+    }
+    .search-box {
+      max-width: 300px;
+    }
+    .table th {
+      background-color: #f8f9fa;
+    }
+    .btn-outline-primary {
+      margin-right: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-md-2 sidebar p-3">
+      <h4 class="text-white mb-4">TechLaunch</h4>
+      <nav class="nav flex-column">
+        <a class="nav-link" href="dashboard.html"><i class="fas fa-home me-2"></i>Dashboard</a>
+        <a class="nav-link" href="users.html"><i class="fas fa-users me-2"></i>Users</a>
+        <a class="nav-link" href="courses.html"><i class="fas fa-book me-2"></i>Courses</a>
+        <a class="nav-link" href="enrollments.html"><i class="fas fa-user-graduate me-2"></i>Enrollments</a>
+        <a class="nav-link active" href="module.html"><i class="fas fa-cog me-2"></i>Module</a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-md-10 p-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Module Management</h2>
+        <div>
+          <select id="course-selector" class="form-select d-inline-block w-auto me-2">
+            <option value="">Select Course</option>
+            <option value="sql_course" selected>SQL Course</option>
+            <!-- Add more courses as needed -->
+          </select>
+          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModuleModal">
+            <i class="fas fa-plus"></i> Add Module
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Box -->
+      <div class="mb-4">
+        <div class="search-box">
+          <input type="text" class="form-control" id="searchModule"
+                 placeholder="Search modules..." onkeyup="filterModules()">
+        </div>
+      </div>
+
+      <!-- Modules Table -->
+      <div class="card">
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover">
+              <thead>
+                <tr>
+                  <th>Module ID</th>
+                  <th>Title</th>
+                  <th>Description</th>
+                  <th>Course ID</th>
+                  <th>Order</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="modules-table">
+                <!-- Modules will be dynamically added here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Module Modal -->
+      <div class="modal fade" id="addModuleModal" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Add New Module</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <form id="add-module-form" onsubmit="event.preventDefault(); createModule();">
+                <div class="mb-3">
+                  <label class="form-label">Module ID</label>
+                  <input type="text" class="form-control" id="module-id" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Title</label>
+                  <input type="text" class="form-control" id="module-title" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Description</label>
+                  <textarea class="form-control" id="module-description" rows="3"></textarea>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Course ID</label>
+                  <select class="form-select" id="module-course-id" required>
+                    <option value="sql_course">SQL Course</option>
+                    <!-- Add more courses as needed -->
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Order</label>
+                  <input type="number" class="form-control" id="module-order" min="1">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Status</label>
+                  <select class="form-select" id="module-status">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+                <div class="modal-footer px-0 pb-0">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Add Module</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Module Modal -->
+      <div class="modal fade" id="editModuleModal" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">Edit Module</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <form id="edit-module-form" onsubmit="event.preventDefault(); updateModule();">
+                <input type="hidden" id="edit-module-id">
+                <div class="mb-3">
+                  <label class="form-label">Title</label>
+                  <input type="text" class="form-control" id="edit-module-title" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Description</label>
+                  <textarea class="form-control" id="edit-module-description" rows="3"></textarea>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Course ID</label>
+                  <select class="form-select" id="edit-module-course-id" required>
+                    <option value="sql_course">SQL Course</option>
+                    <!-- Add more courses as needed -->
+                  </select>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Order</label>
+                  <input type="number" class="form-control" id="edit-module-order" min="1">
+                </div>
+                <div class="mb-3">
+                  <label class="form-label">Status</label>
+                  <select class="form-select" id="edit-module-status">
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+                <div class="modal-footer px-0 pb-0">
+                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Update Module</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Spinner -->
+      <div id="loading-spinner" class="spinner-overlay">
+        <div class="spinner"></div>
+        <p class="text-white mt-3">Loading...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Module Management JS -->
+<script type="module">
+  import { loadModules } from './src/utils/moduleManagement.js';
+  
+  // Add course selector change handler
+  document.getElementById('course-selector').addEventListener('change', function(e) {
+    loadModules(e.target.value);
+  });
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      // Load modules for default course if specified
+      const defaultCourseId = 'sql_course'; // or get from URL/localStorage
+      await loadModules(defaultCourseId);
+    } catch (error) {
+      console.error('Initial load failed:', error);
+    }
+  });
+</script>
+
+</body>
+</html>

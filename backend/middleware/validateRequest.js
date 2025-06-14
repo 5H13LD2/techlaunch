@@ -1,3 +1,5 @@
+/* this is a comment nigga pwedeng idelete
+
 const Joi = require('joi');
 const logger = require('../utils/logger');
 
@@ -50,6 +52,8 @@ const schemas = {
  * @param {string} source - Source of data to validate ('body', 'params', 'query')
  * @returns {Function} Express middleware function
  */
+
+/* this is a comment nigga pwedeng idelete
 const validateRequest = (schemaName, source = 'body') => {
   return (req, res, next) => {
     try {
@@ -96,6 +100,8 @@ const validateRequest = (schemaName, source = 'body') => {
 /**
  * Middleware to validate email parameter
  */
+
+/* this is a comment nigga pwedeng idelete
 const validateEmailParam = (req, res, next) => {
   const emailSchema = Joi.string().email().required();
   const { error } = emailSchema.validate(req.params.email);
@@ -114,6 +120,8 @@ const validateEmailParam = (req, res, next) => {
 /**
  * Middleware to validate course name parameter
  */
+
+/* this is a comment nigga pwedeng idelete
 const validateCourseNameParam = (req, res, next) => {
   const courseNameSchema = Joi.string().min(1).max(100).required();
   const { error } = courseNameSchema.validate(req.params.courseName);
@@ -132,6 +140,8 @@ const validateCourseNameParam = (req, res, next) => {
 /**
  * Middleware to sanitize input data
  */
+
+/* this is a comment nigga pwedeng idelete
 const sanitizeInput = (req, res, next) => {
   // Sanitize strings in request body
   if (req.body && typeof req.body === 'object') {
@@ -152,4 +162,4 @@ module.exports = {
   validateCourseNameParam,
   sanitizeInput,
   schemas
-};
+}; */
