@@ -8,55 +8,47 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/dashboard.css">
-    
+    <link rel="stylesheet" href="courses.css">
 </head>
 <body>
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-2 sidebar">
-                <div class="sidebar-header">
-                    <h4 class="text-white mb-4">
-                        <i class="fas fa-rocket me-2"></i>TechLaunch
-                    </h4>
-                </div>
+            <div class="col-md-2 sidebar p-3">
+                <h4 class="text-white mb-4">TechLaunch</h4>
                 <nav class="nav flex-column">
-                    <a class="nav-link" href="dashboard.html">
-                        <i class="fas fa-home me-2"></i>Dashboard
-                    </a>
-                    <a class="nav-link" href="users.html">
-                        <i class="fas fa-users me-2"></i>Users
-                    </a>
-                    <a class="nav-link active" href="courses.html">
-                        <i class="fas fa-book me-2"></i>Courses
-                    </a>
-                    <a class="nav-link" href="enrollments.html">
-                        <i class="fas fa-user-graduate me-2"></i>Enrollments
-                    </a>
-                    <a class="nav-link" href="module.html">
-                        <i class="fas fa-cubes me-2"></i>Modules
-                    </a>
+                    <a class="nav-link" href="dashboard.html"><i class="fas fa-home me-2"></i>Dashboard</a>
+                    <a class="nav-link" href="users.html"><i class="fas fa-users me-2"></i>Users</a>
+                    <a class="nav-link active" href="courses.html"><i class="fas fa-book me-2"></i>Courses</a>
+                    <a class="nav-link" href="enrollments.html"><i class="fas fa-user-graduate me-2"></i>Enrollments</a>
+                    <a class="nav-link" href="module.html"><i class="fas fa-cog me-2"></i>Module</a>
+                </a>
+                <a class="nav-link" href="lesson.html">
+                    <i class="fas fa-graduation-cap me-2"></i>Lessons
+                </a>
                 </nav>
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-10 main-content">
-                <div class="content-wrapper">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div>
-                            <h2 class="mb-1">Course Management</h2>
-                            <p class="text-muted mb-0">Create, edit, and manage your courses</p>
+            <div class="col-md-10 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Course Management</h2>
+                    <div class="d-flex gap-2">
+                        <div class="input-group" style="width: 300px;">
+                            <input type="text" class="form-control" id="courseSearch" placeholder="Search courses...">
+                            <button class="btn btn-outline-secondary" type="button" id="clearSearch">
+                                <i class="fas fa-times"></i>
+                            </button>
                         </div>
                         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCourseModal">
-                            <i class="fas fa-plus me-2"></i>Add Course
+                            <i class="fas fa-plus"></i> Add Course
                         </button>
                     </div>
+                </div>
 
-                    <!-- Course Grid -->
-                    <div class="courses-grid" id="courses-grid">
-                        <!-- Courses will be dynamically added here -->
-                    </div>
+                <!-- Course Grid -->
+                <div class="courses-grid" id="courses-grid">
+                    <!-- Courses will be dynamically added here -->
                 </div>
             </div>
         </div>
@@ -64,47 +56,34 @@
 
     <!-- Add Course Modal -->
     <div class="modal fade" id="addCourseModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-plus-circle me-2"></i>Create New Course
-                    </h5>
+                    <h5 class="modal-title">Create New Course</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="create-course-form">
                         <div class="mb-3">
-                            <label for="course-id" class="form-label">
-                                <i class="fas fa-tag me-1"></i>Course ID
-                            </label>
+                            <label for="course-id" class="form-label">Course ID</label>
                             <input type="text" class="form-control" id="course-id" required 
                                 placeholder="Enter unique course ID (e.g., java_course)">
-                            <div class="form-text">This ID will be used internally and cannot be changed later.</div>
                         </div>
                         <div class="mb-3">
-                            <label for="course-name" class="form-label">
-                                <i class="fas fa-book me-1"></i>Course Name
-                            </label>
+                            <label for="course-name" class="form-label">Course Name</label>
                             <input type="text" class="form-control" id="course-name" required 
                                 placeholder="Enter course name">
                         </div>
                         <div class="mb-3">
-                            <label for="course-description" class="form-label">
-                                <i class="fas fa-align-left me-1"></i>Description
-                            </label>
+                            <label for="course-description" class="form-label">Description</label>
                             <textarea class="form-control" id="course-description" rows="4" required 
-                                placeholder="Enter detailed course description"></textarea>
+                                placeholder="Enter course description"></textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>Cancel
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="createCourse()">
-                        <i class="fas fa-save me-1"></i>Create Course
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="createCourseBtn">Create Course</button>
                 </div>
             </div>
         </div>
@@ -112,38 +91,28 @@
 
     <!-- Edit Course Modal -->
     <div class="modal fade" id="editCourseModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-edit me-2"></i>Edit Course
-                    </h5>
+                    <h5 class="modal-title">Edit Course</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="edit-course-form">
                         <input type="hidden" id="edit-course-id">
                         <div class="mb-3">
-                            <label for="edit-course-name" class="form-label">
-                                <i class="fas fa-book me-1"></i>Course Name
-                            </label>
+                            <label for="edit-course-name" class="form-label">Course Name</label>
                             <input type="text" class="form-control" id="edit-course-name" required>
                         </div>
                         <div class="mb-3">
-                            <label for="edit-course-description" class="form-label">
-                                <i class="fas fa-align-left me-1"></i>Description
-                            </label>
+                            <label for="edit-course-description" class="form-label">Description</label>
                             <textarea class="form-control" id="edit-course-description" rows="4" required></textarea>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="fas fa-times me-1"></i>Cancel
-                    </button>
-                    <button type="button" class="btn btn-primary" onclick="updateCourse()">
-                        <i class="fas fa-save me-1"></i>Update Course
-                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="updateCourseBtn">Update Course</button>
                 </div>
             </div>
         </div>
@@ -151,110 +120,67 @@
 
     <!-- Loading Spinner -->
     <div id="loading-spinner" class="spinner-overlay">
-        <div class="spinner-container">
-            <div class="spinner"></div>
-            <p class="text-white mt-3">Loading courses...</p>
-        </div>
+        <div class="spinner"></div>
+        <p class="text-white mt-3">Loading...</p>
     </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- External Course Management JS -->
-    <script type="module" src="src/utils/courseManagement.js"></script>
-    
-    <!-- Module Management JS -->
+    <!-- Module imports -->
     <script type="module">
-      import { loadModules, createModule, updateModule, deleteModule, filterModules } from './src/utils/moduleManagement.js';
-      
-      // Make functions globally available
-      window.loadModules = loadModules;
-      window.createModule = createModule;
-      window.updateModule = updateModule;
-      window.deleteModule = deleteModule;
-      window.filterModules = filterModules;
+        import CourseManager from './src/utils/courseManagement.js';
 
-      // Add course selector change handler
-      document.getElementById('course-selector').addEventListener('change', function(e) {
-        loadModules(e.target.value);
-      });
+        // Initialize course manager when DOM is loaded
+        document.addEventListener('DOMContentLoaded', async () => {
+            await CourseManager.init();
 
-      // Initialize with default course
-      document.addEventListener('DOMContentLoaded', function() {
-        const defaultCourse = document.getElementById('course-selector').value;
-        if (defaultCourse) {
-          loadModules(defaultCourse);
-        }
-      });
-    </script>
-    
-    <script>
-        // Global functions for HTML onclick handlers
-        window.createCourse = async function() {
-            const courseId = document.getElementById('course-id').value;
-            const courseName = document.getElementById('course-name').value;
-            const courseDescription = document.getElementById('course-description').value;
-
-            if (!courseId || !courseName || !courseDescription) {
-                alert('Please fill in all fields');
-                return;
-            }
-
-            const { CourseManager } = await import('./src/utils/courseManagement.js');
-            await CourseManager.createCourse({
-                id: courseId,
-                name: courseName,
-                description: courseDescription
-            });
-        };
-
-        window.updateCourse = async function() {
-            const courseId = document.getElementById('edit-course-id').value;
-            const courseName = document.getElementById('edit-course-name').value;
-            const courseDescription = document.getElementById('edit-course-description').value;
-
-            if (!courseName || !courseDescription) {
-                alert('Please fill in all fields');
-                return;
-            }
-
-            const { CourseManager } = await import('./src/utils/courseManagement.js');
-            await CourseManager.updateCourse(courseId, {
-                name: courseName,
-                description: courseDescription
-            });
-        };
-
-        window.editCourse = async function(courseId) {
-            const { CourseManager } = await import('./src/utils/courseManagement.js');
-            await CourseManager.editCourse(courseId);
-        };
-
-        window.deleteCourse = async function(courseId) {
-            if (!confirm('Are you sure you want to delete this course?')) {
-                return;
-            }
-
-            const { CourseManager } = await import('./src/utils/courseManagement.js');
-            await CourseManager.deleteCourse(courseId);
-        };
-
-        // Initialize the page
-        document.addEventListener('DOMContentLoaded', async function() {
-            try {
-                const { CourseManager } = await import('./src/utils/courseManagement.js');
-                await CourseManager.init();
-            } catch (error) {
-                console.error('Failed to initialize course management:', error);
-                document.getElementById('courses-grid').innerHTML = `
-                    <div class="empty-state">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <h3>Failed to Load</h3>
-                        <p>Unable to load course management system. Please check your connection and try again.</p>
-                    </div>
-                `;
-            }
+            // Set up event listeners
+            setupEventListeners();
         });
+
+        function setupEventListeners() {
+            // Create course button
+            document.getElementById('createCourseBtn').addEventListener('click', async () => {
+                const courseData = {
+                    id: document.getElementById('course-id').value,
+                    name: document.getElementById('course-name').value,
+                    description: document.getElementById('course-description').value
+                };
+                await CourseManager.createCourse(courseData);
+            });
+
+            // Update course button
+            document.getElementById('updateCourseBtn').addEventListener('click', async () => {
+                const courseId = document.getElementById('edit-course-id').value;
+                const updateData = {
+                    name: document.getElementById('edit-course-name').value,
+                    description: document.getElementById('edit-course-description').value
+                };
+                await CourseManager.updateCourse(courseId, updateData);
+            });
+
+            // Search functionality
+            const searchInput = document.getElementById('courseSearch');
+            const clearSearchBtn = document.getElementById('clearSearch');
+
+            searchInput.addEventListener('input', (e) => {
+                CourseManager.filterCourses(e.target.value);
+            });
+
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                CourseManager.filterCourses('');
+            });
+
+            // Global event handlers for course actions
+            window.editCourse = (courseId) => CourseManager.editCourse(courseId);
+            window.deleteCourse = async (courseId) => {
+                if (confirm('Are you sure you want to delete this course?')) {
+                    await CourseManager.deleteCourse(courseId);
+                }
+            };
+        }
     </script>
 </body>
-</html>
+</html> 

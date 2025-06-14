@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechLaunch - Lesson Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="lesson.css" rel="stylesheet">
+    <style>
+        /* Add these styles for lesson cards */
+        .lesson-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .lesson-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        .lesson-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .lesson-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 8px;
+        }
+
+        .lesson-meta {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+
+        .meta-item i {
+            color: #007bff;
+            width: 16px;
+        }
+
+        .lesson-content {
+            color: #495057;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+        }
+
+        .code-sample {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+        }
+
+        .lesson-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .lesson-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-code {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .badge-video {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .lesson-id {
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row flex-nowrap">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <div class="sidebar-header mb-4">
+                        <h5 class="text-white">TechLaunch</h5>
+                    </div>
+                    <nav class="nav flex-column">
+                        <a class="nav-link" href="dashboard.html"><i class="fas fa-home me-2"></i>Dashboard</a>
+                        <a class="nav-link" href="users.html"><i class="fas fa-users me-2"></i>Users</a>
+                        <a class="nav-link" href="courses.html"><i class="fas fa-book me-2"></i>Courses</a>
+                        <a class="nav-link" href="enrollments.html"><i class="fas fa-user-graduate me-2"></i>Enrollments</a>
+                        <a class="nav-link" href="module.html"><i class="fas fa-cubes me-2"></i>Module</a>
+                        <a class="nav-link active" href="lesson.html"><i class="fas fa-graduation-cap me-2"></i>Lessons</a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10 main-content">
+                <div class="content-wrapper">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h2 class="mb-1">Lesson Management</h2>
+                            <p class="text-muted mb-0">Create and manage course lessons</p>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <select class="form-select" id="lesson-course-filter" style="width: 200px;">
+                                <option value="">All Courses</option>
+                            </select>
+                            <select class="form-select" id="lesson-module-filter" style="width: 200px;">
+                                <option value="">All Modules</option>
+                            </select>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addLessonModal">
+                                <i class="fas fa-plus me-2"></i>Add Lesson
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Lessons Grid -->
+                    <div class="row" id="lessons-container">
+                        <!-- Lessons will be dynamically added here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="spinner-overlay">
+        <div class="spinner-container">
+            <div class="spinner"></div>
+            <p class="text-white mt-3">Loading lessons...</p>
+        </div>
+    </div>
+
+    <!-- Add Lesson Modal -->
+    <div class="modal fade" id="addLessonModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-plus-circle me-2"></i>Create New Lesson
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="create-lesson-form">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="lesson-course" class="form-label">
+                                    <i class="fas fa-book me-1"></i>Course
+                                </label>
+                                <select class="form-select" id="lesson-course" required>
+                                    <option value="">Select a course</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="lesson-module" class="form-label">
+                                    <i class="fas fa-cubes me-1"></i>Module
+                                </label>
+                                <select class="form-select" id="lesson-module" required>
+                                    <option value="">Select a module</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="lesson-title" class="form-label">
+                                <i class="fas fa-heading me-1"></i>Lesson Title
+                            </label>
+                            <input type="text" class="form-control" id="lesson-title" required 
+                                placeholder="Enter lesson title">
+                        </div>
+                        <div class="mb-3">
+                            <label for="lesson-description" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Description
+                            </label>
+                            <textarea class="form-control" id="lesson-description" rows="2" required 
+                                placeholder="Enter lesson description"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="lesson-content" class="form-label">
+                                <i class="fas fa-file-alt me-1"></i>Content
+                            </label>
+                            <textarea class="form-control" id="lesson-content" rows="4" required 
+                                placeholder="Enter lesson content"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="lesson-code-sample" class="form-label">
+                                <i class="fas fa-code me-1"></i>Code Sample
+                            </label>
+                            <textarea class="form-control" id="lesson-code-sample" rows="3" 
+                                placeholder="Enter code sample (optional)"></textarea>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="lesson-duration" class="form-label">
+                                    <i class="fas fa-clock me-1"></i>Duration (minutes)
+                                </label>
+                                <input type="number" class="form-control" id="lesson-duration" required min="1" value="30">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="lesson-order" class="form-label">
+                                    <i class="fas fa-sort-numeric-up me-1"></i>Order
+                                </label>
+                                <input type="number" class="form-control" id="lesson-order" required min="1" value="1">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="lesson-video-url" class="form-label">
+                                    <i class="fas fa-video me-1"></i>Video URL
+                                </label>
+                                <input type="url" class="form-control" id="lesson-video-url" 
+                                    placeholder="Enter video URL (optional)">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="lesson-has-code-exercise">
+                                <label class="form-check-label" for="lesson-has-code-exercise">
+                                    <i class="fas fa-code me-1"></i>Has Code Exercise
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="create-lesson-btn">
+                        <i class="fas fa-save me-1"></i>Create Lesson
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Lesson Modal -->
+    <div class="modal fade" id="editLessonModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Edit Lesson
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-lesson-form">
+                        <input type="hidden" id="edit-lesson-id">
+                        <div class="mb-3">
+                            <label for="edit-lesson-title" class="form-label">
+                                <i class="fas fa-heading me-1"></i>Lesson Title
+                            </label>
+                            <input type="text" class="form-control" id="edit-lesson-title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-lesson-description" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Description
+                            </label>
+                            <textarea class="form-control" id="edit-lesson-description" rows="2" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-lesson-content" class="form-label">
+                                <i class="fas fa-file-alt me-1"></i>Content
+                            </label>
+                            <textarea class="form-control" id="edit-lesson-content" rows="4" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit-lesson-code-sample" class="form-label">
+                                <i class="fas fa-code me-1"></i>Code Sample
+                            </label>
+                            <textarea class="form-control" id="edit-lesson-code-sample" rows="3"></textarea>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="edit-lesson-duration" class="form-label">
+                                    <i class="fas fa-clock me-1"></i>Duration (minutes)
+                                </label>
+                                <input type="number" class="form-control" id="edit-lesson-duration" required min="1">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="edit-lesson-order" class="form-label">
+                                    <i class="fas fa-sort-numeric-up me-1"></i>Order
+                                </label>
+                                <input type="number" class="form-control" id="edit-lesson-order" required min="1">
+                            </div>
+                            <div class="col-md-4">
+                                <label for="edit-lesson-video-url" class="form-label">
+                                    <i class="fas fa-video me-1"></i>Video URL
+                                </label>
+                                <input type="url" class="form-control" id="edit-lesson-video-url">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="edit-lesson-has-code-exercise">
+                                <label class="form-check-label" for="edit-lesson-has-code-exercise">
+                                    <i class="fas fa-code me-1"></i>Has Code Exercise
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                    <button type="button" class="btn btn-primary" id="update-lesson-btn">
+                        <i class="fas fa-save me-1"></i>Update Lesson
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Lesson Modal -->
+    <div class="modal fade" id="viewLessonModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-eye me-2"></i>View Lesson
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="lesson-view">
+                        <div class="lesson-view-header mb-4">
+                            <h3 id="view-lesson-title" class="lesson-title"></h3>
+                            <div class="d-flex gap-2 align-items-center mb-2">
+                                <span id="view-lesson-id" class="lesson-id"></span>
+                                <span id="view-lesson-course" class="badge bg-secondary"></span>
+                                <span id="view-lesson-module" class="badge bg-info"></span>
+                            </div>
+                            <div class="lesson-badges" id="view-lesson-badges"></div>
+                        </div>
+                        <div class="lesson-view-meta mb-4">
+                            <div class="meta-item">
+                                <i class="fas fa-clock"></i>
+                                <span id="view-lesson-duration"></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-sort-numeric-up"></i>
+                                <span id="view-lesson-order"></span>
+                            </div>
+                            <div class="meta-item">
+                                <i class="fas fa-calendar"></i>
+                                <span id="view-lesson-created"></span>
+                            </div>
+                        </div>
+                        <div class="lesson-view-content mb-4">
+                            <h5 class="mb-3">Content</h5>
+                            <div id="view-lesson-content" class="lesson-content"></div>
+                        </div>
+                        <div id="view-lesson-code-container" class="code-sample mb-4" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h5 class="mb-0">Code Sample</h5>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="copyViewLessonCode()">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                            </div>
+                            <pre><code id="view-lesson-code"></code></pre>
+                        </div>
+                        <div id="view-lesson-video-container" class="mb-4" style="display: none;">
+                            <h5 class="mb-3">Video</h5>
+                            <div class="ratio ratio-16x9">
+                                <iframe id="view-lesson-video" src="" allowfullscreen></iframe>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Close
+                    </button>
+                    <button type="button" class="btn btn-primary" id="edit-from-view-btn">
+                        <i class="fas fa-edit me-1"></i>Edit Lesson
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Lesson Management JS -->
+    <script type="module">
+        import { LessonManager } from './src/utils/lessonManager.js';
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                await LessonManager.init();
+                setupEventListeners();
+            } catch (error) {
+                console.error('Failed to initialize lesson management:', error);
+                showErrorState();
+            }
+        });
+
+        function setupEventListeners() {
+            // Course filter
+            document.getElementById('lesson-course-filter').addEventListener('change', (e) => {
+                const courseId = e.target.value;
+                LessonManager.loadModules(courseId);
+                LessonManager.filterLessons(courseId, '');
+            });
+
+            // Module filter
+            document.getElementById('lesson-module-filter').addEventListener('change', (e) => {
+                const moduleId = e.target.value;
+                LessonManager.filterLessons(LessonManager.currentCourseFilter, moduleId);
+            });
+
+            // Create lesson form submission
+            document.getElementById('create-lesson-btn').addEventListener('click', async () => {
+                const form = document.getElementById('create-lesson-form');
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                const lessonData = {
+                    courseId: document.getElementById('lesson-course').value,
+                    moduleId: document.getElementById('lesson-module').value,
+                    title: document.getElementById('lesson-title').value,
+                    description: document.getElementById('lesson-description').value,
+                    content: document.getElementById('lesson-content').value,
+                    codeSample: document.getElementById('lesson-code-sample').value,
+                    estimatedMinutes: parseInt(document.getElementById('lesson-duration').value),
+                    order: parseInt(document.getElementById('lesson-order').value),
+                    hasCodeExercise: document.getElementById('lesson-has-code-exercise').checked,
+                    videoUrl: document.getElementById('lesson-video-url').value || null
+                };
+
+                try {
+                    await LessonManager.createLesson(lessonData);
+                    bootstrap.Modal.getInstance(document.getElementById('addLessonModal')).hide();
+                    form.reset();
+                } catch (error) {
+                    console.error('Failed to create lesson:', error);
+                }
+            });
+
+            // Update lesson form submission
+            document.getElementById('update-lesson-btn').addEventListener('click', async () => {
+                const form = document.getElementById('edit-lesson-form');
+                if (!form.checkValidity()) {
+                    form.reportValidity();
+                    return;
+                }
+
+                const lessonId = document.getElementById('edit-lesson-id').value;
+                const updateData = {
+                    title: document.getElementById('edit-lesson-title').value,
+                    description: document.getElementById('edit-lesson-description').value,
+                    content: document.getElementById('edit-lesson-content').value,
+                    codeSample: document.getElementById('edit-lesson-code-sample').value,
+                    estimatedMinutes: parseInt(document.getElementById('edit-lesson-duration').value),
+                    order: parseInt(document.getElementById('edit-lesson-order').value),
+                    hasCodeExercise: document.getElementById('edit-lesson-has-code-exercise').checked,
+                    videoUrl: document.getElementById('edit-lesson-video-url').value || null
+                };
+
+                try {
+                    await LessonManager.updateLesson(lessonId, updateData);
+                    bootstrap.Modal.getInstance(document.getElementById('editLessonModal')).hide();
+                } catch (error) {
+                    console.error('Failed to update lesson:', error);
+                }
+            });
+
+            // Edit from view button
+            document.getElementById('edit-from-view-btn').addEventListener('click', () => {
+                const lessonId = document.getElementById('view-lesson-id').textContent;
+                bootstrap.Modal.getInstance(document.getElementById('viewLessonModal')).hide();
+                editLesson(lessonId);
+            });
+        }
+
+        // Global functions for lesson actions
+        window.editLesson = async (lessonId) => {
+            try {
+                await LessonManager.editLesson(lessonId);
+            } catch (error) {
+                console.error('Failed to edit lesson:', error);
+            }
+        };
+
+        window.deleteLesson = async (lessonId) => {
+            if (confirm('Are you sure you want to delete this lesson? This action cannot be undone.')) {
+                try {
+                    await LessonManager.deleteLesson(lessonId);
+                } catch (error) {
+                    console.error('Failed to delete lesson:', error);
+                }
+            }
+        };
+
+        window.copyCodeSample = (lessonId) => {
+            const lesson = LessonManager.getLessonById(lessonId);
+            if (lesson && lesson.codeSample) {
+                navigator.clipboard.writeText(lesson.codeSample)
+                    .then(() => showToast('Code sample copied to clipboard!'))
+                    .catch(err => console.error('Failed to copy code:', err));
+            }
+        };
+
+        window.viewLesson = async (lessonId) => {
+            try {
+                const lesson = LessonManager.getLessonById(lessonId);
+                if (!lesson) {
+                    throw new Error('Lesson not found');
+                }
+
+                // Update modal content
+                document.getElementById('view-lesson-title').textContent = lesson.title;
+                document.getElementById('view-lesson-id').textContent = lesson.id;
+                
+                const course = LessonManager.courses.find(c => c.id === lesson.courseId);
+                const module = LessonManager.modules.find(m => m.id === lesson.moduleId);
+                
+                document.getElementById('view-lesson-course').textContent = course?.name || lesson.courseId;
+                document.getElementById('view-lesson-module').textContent = module?.title || lesson.moduleId;
+                
+                // Update badges
+                const badgesContainer = document.getElementById('view-lesson-badges');
+                badgesContainer.innerHTML = '';
+                if (lesson.hasCodeExercise) {
+                    badgesContainer.innerHTML += '<span class="lesson-badge badge-code"><i class="fas fa-code"></i>Code Exercise</span>';
+                }
+                if (lesson.videoUrl) {
+                    badgesContainer.innerHTML += '<span class="lesson-badge badge-video"><i class="fas fa-video"></i>Video</span>';
+                }
+
+                // Update meta information
+                document.getElementById('view-lesson-duration').textContent = `${lesson.estimatedMinutes} minutes`;
+                document.getElementById('view-lesson-order').textContent = `Order: ${lesson.order}`;
+                document.getElementById('view-lesson-created').textContent = 
+                    `Created: ${new Date(lesson.createdAt._seconds * 1000).toLocaleDateString()}`;
+
+                // Update content
+                document.getElementById('view-lesson-content').textContent = lesson.content;
+
+                // Update code sample if available
+                const codeContainer = document.getElementById('view-lesson-code-container');
+                if (lesson.codeSample) {
+                    document.getElementById('view-lesson-code').textContent = lesson.codeSample;
+                    codeContainer.style.display = 'block';
+                } else {
+                    codeContainer.style.display = 'none';
+                }
+
+                // Update video if available
+                const videoContainer = document.getElementById('view-lesson-video-container');
+                const videoFrame = document.getElementById('view-lesson-video');
+                if (lesson.videoUrl) {
+                    // Convert YouTube URL to embed URL if needed
+                    const embedUrl = lesson.videoUrl.replace('watch?v=', 'embed/');
+                    videoFrame.src = embedUrl;
+                    videoContainer.style.display = 'block';
+                } else {
+                    videoContainer.style.display = 'none';
+                    videoFrame.src = '';
+                }
+
+                // Show the modal
+                const viewModal = new bootstrap.Modal(document.getElementById('viewLessonModal'));
+                viewModal.show();
+            } catch (error) {
+                console.error('Failed to view lesson:', error);
+                showToast('Failed to load lesson details', 'error');
+            }
+        };
+
+        window.copyViewLessonCode = () => {
+            const code = document.getElementById('view-lesson-code').textContent;
+            if (code) {
+                navigator.clipboard.writeText(code)
+                    .then(() => showToast('Code sample copied to clipboard!'))
+                    .catch(err => console.error('Failed to copy code:', err));
+            }
+        };
+
+        function showErrorState() {
+            const container = document.getElementById('lessons-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="col-12">
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                            <h3>Failed to Load</h3>
+                            <p>Unable to load lesson management system. Please check your connection and try again.</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            // You can implement your preferred toast notification system here
+            console.log(`${type.toUpperCase()}: ${message}`);
+            alert(message);
+        }
+    </script>
+</body>
+</html>
