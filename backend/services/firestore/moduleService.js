@@ -75,14 +75,10 @@ class ModulesService {
   }
 
   // Enhanced method to get specific module by ID
-  static async getModuleById(moduleId) {
+  static async getModuleById(courseId, moduleId) {
     try {
-      console.log('🔍 Getting module by ID:', moduleId);
+      console.log('🔍 Getting module by ID:', moduleId, 'in course:', courseId);
       
-      // Extract course ID from module ID (e.g., "python_module_1" -> "python_course")
-      const courseId = moduleId.split('_')[0] + '_course';
-      console.log('📚 Looking for module in course:', courseId);
-
       // Try both 'modules' and 'module' subcollections
       const moduleCollections = ['modules', 'module'];
       
@@ -119,7 +115,7 @@ class ModulesService {
         }
       }
       
-      console.log('❌ Module not found:', moduleId);
+      console.log('❌ Module not found:', moduleId, 'in course:', courseId);
       return null;
     } catch (error) {
       console.error('❌ Error getting module by ID:', error.message);

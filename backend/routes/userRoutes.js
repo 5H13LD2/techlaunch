@@ -6,7 +6,7 @@ const userService = require('../services/firestore/userService');
 // Get all users
 router.get('/', async (req, res) => {
     try {
-        const users = await userService.getAll();
+        const users = await userService.getAllUsers();
         res.json({
             success: true,
             data: users,

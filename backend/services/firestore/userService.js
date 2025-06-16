@@ -8,7 +8,6 @@ class UserService {
   // Get all users with their course information
   static async getAllUsers() {
     try {
-      logger.database('📋 Fetching all users');
       const usersSnapshot = await db.collection('users').get();
       const users = [];
       
@@ -24,10 +23,9 @@ class UserService {
         });
       });
       
-      logger.info(`✅ Retrieved ${users.length} users`);
       return users;
     } catch (error) {
-      logger.error('❌ Failed to retrieve users', { error: error.message });
+      logger.error('❌ Failed to retrieve users:', { error: error.message });
       throw new Error('Failed to retrieve users from database');
     }
   }
@@ -35,21 +33,18 @@ class UserService {
   // Get user by email
   static async getUserByEmail(email) {
     try {
-      logger.database(`🔍 Fetching user by email: ${email}`);
       const userSnapshot = await db.collection('users')
         .where('email', '==', email)
         .limit(1)
         .get();
       
       if (userSnapshot.empty) {
-        logger.warn(`⚠️ User not found with email: ${email}`);
         return null;
       }
       
       const userDoc = userSnapshot.docs[0];
       const userData = userDoc.data();
       
-      logger.info(`✅ Found user: ${email}`);
       return {
         id: userDoc.id,
         userId: userData.userId || userDoc.id,
@@ -58,7 +53,7 @@ class UserService {
         coursesTaken: userData.coursesTaken || []
       };
     } catch (error) {
-      logger.error('❌ Failed to find user by email', { 
+      logger.error('❌ Failed to find user by email:', { 
         email, 
         error: error.message 
       });
@@ -70,12 +65,10 @@ class UserService {
   static async createUser(userData) {
     try {
       const { userId, username, email } = userData;
-      logger.database('📝 Creating new user', { userId, username, email });
       
       // Check if user already exists
       const existingUser = await this.getUserByEmail(email);
       if (existingUser) {
-        logger.warn('⚠️ User creation failed - email already exists', { email });
         throw new Error('User with this email already exists');
       }
       
@@ -89,18 +82,13 @@ class UserService {
       
       const docRef = await db.collection('users').add(newUser);
       
-      logger.info('✅ User created successfully', { 
-        userId: docRef.id, 
-        email 
-      });
-      
       return {
         id: docRef.id,
         ...newUser,
         createdAt: new Date()
       };
     } catch (error) {
-      logger.error('❌ Failed to create user', { 
+      logger.error('❌ Failed to create user:', { 
         userData,
         error: error.message 
       });
@@ -111,11 +99,6 @@ class UserService {
   // Enroll user in course using Firestore transaction
   static async enrollUserInCourse(userEmail, courseName) {
     try {
-      logger.database('🎓 Starting course enrollment transaction', { 
-        userEmail, 
-        courseName 
-      });
-
       const result = await db.runTransaction(async (transaction) => {
         // Get user by email
         const userQuery = await db.collection('users')
@@ -124,7 +107,6 @@ class UserService {
           .get();
         
         if (userQuery.empty) {
-          logger.warn('⚠️ Enrollment failed - user not found', { userEmail });
           throw new Error('User not found');
         }
         
@@ -138,7 +120,6 @@ class UserService {
           .get();
         
         if (courseQuery.empty) {
-          logger.warn('⚠️ Enrollment failed - course not found', { courseName });
           throw new Error('Course not found');
         }
         
@@ -148,10 +129,6 @@ class UserService {
         // Check if user is already enrolled
         const userCourses = userData.coursesTaken || [];
         if (userCourses.includes(courseName)) {
-          logger.warn('⚠️ Enrollment failed - user already enrolled', { 
-            userEmail, 
-            courseName 
-          });
           throw new Error('User is already enrolled in this course');
         }
         
@@ -180,13 +157,9 @@ class UserService {
         };
       });
       
-      logger.info('✅ Course enrollment successful', { 
-        userEmail, 
-        courseName 
-      });
       return result;
     } catch (error) {
-      logger.error('❌ Course enrollment failed', { 
+      logger.error('❌ Course enrollment failed:', { 
         userEmail, 
         courseName, 
         error: error.message 
@@ -198,7 +171,6 @@ class UserService {
   // Get recent activity (last 10 enrollments)
   static async getRecentActivity() {
     try {
-      logger.database('📊 Fetching recent activity');
       // This is a simplified version - in a real app, you'd store enrollment history
       const users = await this.getAllUsers();
       const recentActivity = [];
@@ -215,10 +187,9 @@ class UserService {
       });
       
       const sortedActivity = recentActivity.sort((a, b) => b.timestamp - a.timestamp);
-      logger.info(`✅ Retrieved ${sortedActivity.length} recent activities`);
       return sortedActivity;
     } catch (error) {
-      logger.error('❌ Failed to retrieve recent activity', { 
+      logger.error('❌ Failed to retrieve recent activity:', { 
         error: error.message 
       });
       throw new Error('Failed to retrieve recent activity');

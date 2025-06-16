@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
-const FirestoreServices = require('../services/firestore/lessonService');
+const lessonService = require('../services/firestore/lessonService');
 
 // Get all lessons
 router.get('/', async (req, res) => {
   try {
     logger.api('Fetching all lessons');
-    const lessons = await FirestoreServices.getAllLessons();
+    const lessons = await lessonService.getAllLessons();
     res.json({ success: true, data: lessons });
   } catch (error) {
     logger.error('Failed to fetch lessons', { error: error.message });
@@ -20,7 +20,7 @@ router.get('/module/:moduleId', async (req, res) => {
   const { moduleId } = req.params;
   try {
     logger.api(`Fetching lessons for module: ${moduleId}`);
-    const lessons = await FirestoreServices.getLessonsByModuleId(moduleId);
+    const lessons = await lessonService.getLessonsByModuleId(moduleId);
     res.json({ success: true, data: lessons });
   } catch (error) {
     logger.error('Failed to fetch module lessons', { 
@@ -36,7 +36,7 @@ router.get('/course/:courseId/module/:moduleId', async (req, res) => {
   const { courseId, moduleId } = req.params;
   try {
     logger.api(`Fetching lessons for course ${courseId} and module ${moduleId}`);
-    const lessons = await FirestoreServices.getLessonsByCourseAndModule(courseId, moduleId);
+    const lessons = await lessonService.getLessonsByCourseAndModule(courseId, moduleId);
     res.json({ success: true, data: lessons });
   } catch (error) {
     logger.error('Failed to fetch course module lessons', { 

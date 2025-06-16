@@ -26,17 +26,17 @@ class ModuleController {
   // Get module by ID
   static async getModuleById(req, res) {
     try {
-      const { moduleId } = req.params;
+      const { moduleId, courseId } = req.params;
       
-      if (!moduleId) {
+      if (!moduleId || !courseId) {
         return res.status(400).json({
           success: false,
-          message: 'Module ID is required'
+          message: 'Module ID and Course ID are required'
         });
       }
 
-      console.log('🎯 Controller: Getting module by ID:', moduleId);
-      const module = await ModulesService.getModuleById(moduleId);
+      console.log('🎯 Controller: Getting module by ID:', moduleId, 'in course:', courseId);
+      const module = await ModulesService.getModuleById(courseId, moduleId);
       
       if (!module) {
         return res.status(404).json({

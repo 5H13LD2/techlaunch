@@ -44,7 +44,7 @@ export class ModuleManager {
         showLoading();
         try {
             const url = courseId ? 
-                `${API_BASE_URL}/modules?courseId=${courseId}` : 
+                `${API_BASE_URL}/courses/${courseId}/modules` : 
                 `${API_BASE_URL}/modules`;
             
             const response = await fetch(url);
@@ -256,10 +256,10 @@ export class ModuleManager {
         }
     }
 
-    static async editModule(moduleId) {
+    static async editModule(moduleId, courseId) {
         showLoading();
         try {
-            const response = await fetch(`${API_BASE_URL}/modules/${moduleId}`);
+            const response = await fetch(`${API_BASE_URL}/courses/${courseId}/modules/${moduleId}`);
             const data = await response.json();
             
             if (data.success) {

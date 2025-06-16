@@ -1,4 +1,5 @@
 const { initializeFirebase, admin } = require('../../config/firebase-config');
+const logger = require('../../utils/logger');
 
 // Initialize Firebase and get db instance
 const db = initializeFirebase();
@@ -22,10 +23,9 @@ class CoursesService {
         });
       });
       
-      console.log(`📚 Retrieved ${courses.length} courses`);
       return courses;
     } catch (error) {
-      console.error('❌ Error getting courses:', error);
+      logger.error('❌ Failed to retrieve courses:', error);
       throw new Error('Failed to retrieve courses from database');
     }
   }
@@ -53,7 +53,7 @@ class CoursesService {
         enrolledUsers: courseData.enrolledUsers || []
       };
     } catch (error) {
-      console.error('❌ Error getting course by name:', error);
+      logger.error('❌ Failed to find course by name:', error);
       throw new Error('Failed to find course');
     }
   }
@@ -77,7 +77,7 @@ class CoursesService {
         enrolledUsers: courseData.enrolledUsers || []
       };
     } catch (error) {
-      console.error('❌ Error getting course by ID:', error);
+      logger.error('❌ Failed to find course by ID:', error);
       throw new Error('Failed to find course');
     }
   }
@@ -103,14 +103,13 @@ class CoursesService {
       
       const docRef = await db.collection('courses').add(newCourse);
       
-      console.log(`✅ Created new course: ${courseName} with ID: ${docRef.id}`);
       return {
         id: docRef.id,
         ...newCourse,
         createdAt: new Date()
       };
     } catch (error) {
-      console.error('❌ Error creating course:', error);
+      logger.error('❌ Failed to create course:', error);
       throw new Error(error.message || 'Failed to create course');
     }
   }
@@ -132,14 +131,13 @@ class CoursesService {
       
       await courseRef.update(updatedData);
       
-      console.log(`✅ Updated course: ${courseId}`);
       return {
         id: courseId,
         ...courseDoc.data(),
         ...updatedData
       };
     } catch (error) {
-      console.error('❌ Error updating course:', error);
+      logger.error('❌ Failed to update course:', error);
       throw new Error(error.message || 'Failed to update course');
     }
   }
@@ -156,10 +154,9 @@ class CoursesService {
       
       await courseRef.delete();
       
-      console.log(`✅ Deleted course: ${courseId}`);
       return { success: true, message: 'Course deleted successfully' };
     } catch (error) {
-      console.error('❌ Error deleting course:', error);
+      logger.error('❌ Failed to delete course:', error);
       throw new Error(error.message || 'Failed to delete course');
     }
   }
@@ -188,10 +185,9 @@ class CoursesService {
         lastUpdated: admin.firestore.FieldValue.serverTimestamp()
       });
       
-      console.log(`✅ Added user ${userEmail} to course ${courseId}`);
       return { success: true, message: 'User added to course successfully' };
     } catch (error) {
-      console.error('❌ Error adding user to course:', error);
+      logger.error('❌ Failed to add user to course:', error);
       throw new Error(error.message || 'Failed to add user to course');
     }
   }
@@ -216,10 +212,9 @@ class CoursesService {
         lastUpdated: admin.firestore.FieldValue.serverTimestamp()
       });
       
-      console.log(`✅ Removed user ${userEmail} from course ${courseId}`);
       return { success: true, message: 'User removed from course successfully' };
     } catch (error) {
-      console.error('❌ Error removing user from course:', error);
+      logger.error('❌ Failed to remove user from course:', error);
       throw new Error(error.message || 'Failed to remove user from course');
     }
   }
@@ -236,8 +231,101 @@ class CoursesService {
       const courseData = courseDoc.data();
       return courseData.enrolledUsers || [];
     } catch (error) {
-      console.error('❌ Error getting enrolled users:', error);
+      logger.error('❌ Failed to retrieve enrolled users:', error);
       throw new Error('Failed to retrieve enrolled users');
+    }
+  }
+
+  // Get course modules
+  static async getCourseModules(courseId) {
+    try {
+      // First get all modules for the course
+      const modulesSnapshot = await db.collection('modules')
+        .where('courseId', '==', courseId)
+        .get();
+      
+      const modules = [];
+      modulesSnapshot.forEach(doc => {
+        const moduleData = doc.data();
+        modules.push({
+          id: doc.id,
+          moduleId: moduleData.moduleId || doc.id,
+          courseId: moduleData.courseId,
+          title: moduleData.title || 'Untitled Module',
+          description: moduleData.description || 'No description available',
+          order: moduleData.order || 0,
+          lessons: moduleData.lessons || []
+        });
+      });
+      
+      // Sort modules by order in memory instead of in the query
+      modules.sort((a, b) => (a.order || 0) - (b.order || 0));
+      
+      return modules;
+    } catch (error) {
+      logger.error('❌ Failed to retrieve course modules:', error);
+      throw new Error('Failed to retrieve course modules');
+    }
+  }
+
+  // Get course enrollments
+  static async getCourseEnrollments(courseId) {
+    try {
+      const courseDoc = await db.collection('courses').doc(courseId).get();
+      
+      if (!courseDoc.exists) {
+        throw new Error('Course not found');
+      }
+      
+      const courseData = courseDoc.data();
+      return courseData.enrolledUsers || [];
+    } catch (error) {
+      logger.error('❌ Failed to retrieve course enrollments:', error);
+      throw new Error('Failed to retrieve course enrollments');
+    }
+  }
+
+  // Get module by ID
+  static async getModuleById(courseId, moduleId) {
+    try {
+      // Try both 'modules' and 'module' subcollections
+      const moduleCollections = ['modules', 'module'];
+      
+      for (const moduleCollection of moduleCollections) {
+        try {
+          const moduleDoc = await db
+            .collection('courses')
+            .doc(courseId)
+            .collection(moduleCollection)
+            .doc(moduleId)
+            .get();
+
+          if (moduleDoc.exists) {
+            const moduleData = moduleDoc.data();
+            return {
+              id: moduleData.id || moduleDoc.id,
+              moduleId: moduleData.moduleId || moduleData.id || moduleDoc.id,
+              courseId: moduleData.courseId || courseId,
+              title: moduleData.title,
+              description: moduleData.description,
+              order: moduleData.order || 0,
+              estimatedMinutes: moduleData.estimatedMinutes || moduleData.estimatedMinutess || 0,
+              totalLessons: moduleData.totalLessons || 0,
+              isUnlocked: moduleData.isUnlocked || false,
+              createdAt: moduleData.createdAt,
+              updatedAt: moduleData.updatedAt,
+              source: moduleCollection
+            };
+          }
+        } catch (error) {
+          logger.error(`Error checking ${moduleCollection}:`, error);
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      logger.error('Failed to retrieve module:', error);
+      throw new Error('Failed to retrieve module');
     }
   }
 }

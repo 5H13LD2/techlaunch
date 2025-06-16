@@ -57,6 +57,7 @@ class QuizController {
   async getQuizzesByLesson(req, res) {
     try {
       const { lessonId } = req.params;
+      logger.info(`Accessed quizzes for lesson ${lessonId}`, { lessonId, user: req.user?.id || null });
       const quizzes = await quizService.getQuizzesByLesson(lessonId);
       
       res.status(200).json({

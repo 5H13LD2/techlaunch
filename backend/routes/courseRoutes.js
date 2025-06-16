@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
-const FirestoreServices = require('../services/firestore/courseService');
+const courseService = require('../services/firestore/courseService');
 
 // ================================
 // COURSE ROUTES
@@ -10,7 +10,7 @@ const FirestoreServices = require('../services/firestore/courseService');
 // Get all courses
 router.get('/', async (req, res) => {
     try {
-        const courses = await FirestoreServices.getAllCourses();
+        const courses = await courseService.getAllCourses();
         res.json({
             success: true,
             data: courses,
@@ -30,7 +30,7 @@ router.get('/', async (req, res) => {
 router.get('/:courseId', async (req, res) => {
     try {
         const { courseId } = req.params;
-        const course = await FirestoreServices.getCourseById(courseId);
+        const course = await courseService.getCourseById(courseId);
         
         if (!course) {
             return res.status(404).json({
@@ -68,7 +68,7 @@ router.post('/', async (req, res) => {
             });
         }
         
-        const newCourse = await FirestoreServices.createCourse({
+        const newCourse = await courseService.createCourse({
             courseName: courseName.trim(),
             description: description.trim(),
             status,
@@ -100,7 +100,7 @@ router.put('/:courseId', async (req, res) => {
             updatedAt: new Date().toISOString()
         };
         
-        const updatedCourse = await FirestoreServices.updateCourse(courseId, updateData);
+        const updatedCourse = await courseService.updateCourse(courseId, updateData);
         
         if (!updatedCourse) {
             return res.status(404).json({
@@ -128,7 +128,7 @@ router.put('/:courseId', async (req, res) => {
 router.delete('/:courseId', async (req, res) => {
     try {
         const { courseId } = req.params;
-        await FirestoreServices.deleteCourse(courseId);
+        await courseService.deleteCourse(courseId);
         
         res.json({
             success: true,
@@ -148,7 +148,7 @@ router.delete('/:courseId', async (req, res) => {
 router.get('/:courseId/modules', async (req, res) => {
     try {
         const { courseId } = req.params;
-        const modules = await FirestoreServices.getCourseModules(courseId);
+        const modules = await courseService.getCourseModules(courseId);
         
         res.json({
             success: true,
@@ -164,11 +164,38 @@ router.get('/:courseId/modules', async (req, res) => {
     }
 });
 
+// Get specific module in a course
+router.get('/:courseId/modules/:moduleId', async (req, res) => {
+    try {
+        const { courseId, moduleId } = req.params;
+        const module = await courseService.getModuleById(courseId, moduleId);
+        
+        if (!module) {
+            return res.status(404).json({
+                success: false,
+                message: 'Module not found'
+            });
+        }
+
+        res.json({
+            success: true,
+            data: module
+        });
+    } catch (error) {
+        logger.error('❌ Error getting module:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message,
+            error: 'Failed to retrieve module'
+        });
+    }
+});
+
 // Get course enrollments
 router.get('/:courseId/enrollments', async (req, res) => {
     try {
         const { courseId } = req.params;
-        const enrollments = await FirestoreServices.getCourseEnrollments(courseId);
+        const enrollments = await courseService.getCourseEnrollments(courseId);
         
         res.json({
             success: true,

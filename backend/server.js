@@ -5,6 +5,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 require('dotenv').config();
 const logger = require('./utils/logger');
+const ModulesService = require('./services/firestore/moduleService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -36,10 +37,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging middleware
 app.use((req, res, next) => {
-    logger.info(`📥 ${req.method} ${req.path}`, {
-        ip: req.ip,
-        userAgent: req.get('user-agent')
-    });
+    logger.info(`📥 ${req.method} ${req.path}`);
     next();
 });
 
@@ -340,7 +338,6 @@ app.use('*', (req, res) => {
 app.use((error, req, res, next) => {
     logger.error('🔥 Global error handler:', { 
         error: error.message,
-        stack: error.stack,
         path: req.originalUrl,
         method: req.method,
         status: error.status || 500
@@ -348,8 +345,7 @@ app.use((error, req, res, next) => {
     
     res.status(error.status || 500).json({
         success: false,
-        message: error.message || 'Internal Server Error',
-        error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        message: error.message || 'Internal Server Error'
     });
 });
 
@@ -417,5 +413,23 @@ process.on('uncaughtException', (error) => {
     });
     gracefulShutdown('uncaughtException');
 });
+
+// Add specific module route
+app.get('/api/courses/:courseId/modules/:moduleId', asyncHandler(async (req, res) => {
+    const { courseId, moduleId } = req.params;
+    const module = await ModulesService.getModuleById(courseId, moduleId);
+    
+    if (!module) {
+        return res.status(404).json({
+            success: false,
+            message: 'Module not found'
+        });
+    }
+
+    res.json({
+        success: true,
+        data: module
+    });
+}));
 
 module.exports = app;
