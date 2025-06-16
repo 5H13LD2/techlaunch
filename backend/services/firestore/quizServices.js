@@ -77,6 +77,30 @@ class QuizService {
     }
   }
 
+  // Get quiz by lesson
+  async getQuizByLesson(courseId, moduleId, lessonId) {
+    try {
+      logger.info(`Fetching quizzes for course: ${courseId}, module: ${moduleId}, lesson: ${lessonId}`);
+      
+      const snapshot = await db.collection(QUIZ_COLLECTION)
+        .where('courseId', '==', courseId)
+        .where('moduleId', '==', moduleId)
+        .where('lessonId', '==', lessonId)
+        .get();
+
+      const quizzes = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      logger.info(`Found ${quizzes.length} quizzes for lesson ${lessonId}`);
+      return quizzes;
+    } catch (error) {
+      logger.error(`Error fetching quizzes for lesson ${lessonId}:`, error);
+      throw new Error('Failed to fetch quizzes for lesson');
+    }
+  }
+
   // Create new quiz
   async createQuiz(quizData) {
     try {
@@ -320,6 +344,108 @@ class QuizService {
     } catch (error) {
       logger.error(`Error toggling quiz status ${quizId}:`, error);
       throw new Error('Failed to toggle quiz status');
+    }
+  }
+
+  // Get quizzes from specific collection
+  async getQuizzesByCollection(collectionName) {
+    try {
+      logger.info(`Attempting to fetch quizzes from collection: ${collectionName}`);
+      
+      // Get collection reference
+      const collectionRef = db.collection(collectionName);
+      
+      // Get all documents in the collection
+      const snapshot = await collectionRef.get();
+      
+      if (snapshot.empty) {
+        logger.warn(`No documents found in collection: ${collectionName}`);
+        return [];
+      }
+
+      // Map the documents to quiz objects
+      const quizzes = snapshot.docs.map(doc => {
+        const data = doc.data();
+        logger.info(`Found quiz with ID: ${doc.id}`);
+        return {
+          id: doc.id,
+          ...data
+        };
+      });
+
+      logger.info(`Successfully retrieved ${quizzes.length} quizzes from ${collectionName}`);
+      return quizzes;
+    } catch (error) {
+      logger.error(`Error fetching quizzes from collection ${collectionName}:`, error);
+      throw new Error(`Failed to fetch quizzes from collection ${collectionName}: ${error.message}`);
+    }
+  }
+
+  // Create test quiz in collection (for testing purposes)
+  async createTestQuiz(collectionName) {
+    try {
+      logger.info(`Creating test quiz in collection: ${collectionName}`);
+      
+      const testQuiz = {
+        title: "Java Basics Quiz",
+        moduleId: "java_module_1",
+        lessonId: "java_lesson_1_1",
+        questions: [
+          {
+            id: "q1",
+            question: "What is composition in Java?",
+            options: {
+              A: "IS-A relationship",
+              B: "HAS-A relationship",
+              C: "PART-OF relationship",
+              D: "USES relationship"
+            },
+            correctAnswer: "B",
+            difficulty: "NORMAL"
+          }
+        ],
+        timeLimit: 30,
+        passingScore: 70,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const docRef = await db.collection(collectionName).add(testQuiz);
+      logger.info(`Test quiz created with ID: ${docRef.id} in collection: ${collectionName}`);
+      
+      return {
+        id: docRef.id,
+        ...testQuiz
+      };
+    } catch (error) {
+      logger.error(`Error creating test quiz in collection ${collectionName}:`, error);
+      throw new Error(`Failed to create test quiz: ${error.message}`);
+    }
+  }
+
+  // Get specific quiz from collection
+  async getQuizFromCollection(collectionName, quizId) {
+    try {
+      logger.info(`Fetching quiz ${quizId} from collection: ${collectionName}`);
+      
+      const doc = await db.collection(collectionName).doc(quizId).get();
+      
+      if (!doc.exists) {
+        logger.warn(`Quiz ${quizId} not found in collection ${collectionName}`);
+        return null;
+      }
+
+      const quiz = {
+        id: doc.id,
+        ...doc.data()
+      };
+
+      logger.info(`Successfully retrieved quiz ${quizId} from ${collectionName}`);
+      return quiz;
+    } catch (error) {
+      logger.error(`Error fetching quiz ${quizId} from collection ${collectionName}:`, error);
+      throw new Error(`Failed to fetch quiz: ${error.message}`);
     }
   }
 }

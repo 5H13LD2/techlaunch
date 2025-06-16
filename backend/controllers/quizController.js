@@ -6,47 +6,51 @@ const quizService = require('../services/firestore/quizServices');
 const logger = require('../utils/logger');
 
 class QuizController {
-  // Get all quizzes
+  // Get all quizzes from java_quiz collection
   async getAllQuizzes(req, res) {
     try {
-      const quizzes = await quizService.getAllQuizzes();
-      res.status(200).json({
-        success: true,
+      logger.info('Fetching all quizzes from java_quiz collection');
+      const quizzes = await quizService.getQuizzesByCollection('java_quiz');
+      
+      res.status(200).json({ 
+        success: true, 
         data: quizzes,
-        message: 'Quizzes retrieved successfully'
+        count: quizzes.length
       });
     } catch (error) {
-      logger.error('Failed to fetch quizzes', error);
-      res.status(500).json({
-        success: false,
+      logger.error('Error fetching quizzes:', error);
+      res.status(500).json({ 
+        success: false, 
         message: 'Failed to fetch quizzes',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
 
-  // Get quiz by ID
+  // Get specific quiz by ID from java_quiz collection
   async getQuizById(req, res) {
     try {
-      const { id } = req.params;
-      const quiz = await quizService.getQuizById(id);
+      const { quizId } = req.params;
+      logger.info(`Fetching quiz ${quizId} from java_quiz collection`);
       
-      if (!quiz) {
-        return res.status(404).json({
-          success: false,
-          message: 'Quiz not found'
+      const doc = await quizService.getQuizFromCollection('java_quiz', quizId);
+      
+      if (!doc) {
+        logger.warn(`Quiz ${quizId} not found`);
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Quiz not found' 
         });
       }
 
-      res.status(200).json({
-        success: true,
-        data: quiz,
-        message: 'Quiz retrieved successfully'
+      res.status(200).json({ 
+        success: true, 
+        data: doc 
       });
     } catch (error) {
-      logger.error(`Failed to fetch quiz ${req.params.id}`, error);
-      res.status(500).json({
-        success: false,
+      logger.error(`Error fetching quiz ${req.params.quizId}:`, error);
+      res.status(500).json({ 
+        success: false, 
         message: 'Failed to fetch quiz',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -263,6 +267,38 @@ class QuizController {
       res.status(500).json({
         success: false,
         message: 'Failed to toggle quiz status',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  }
+
+  // Get quiz by lesson
+  async getQuizByLesson(req, res) {
+    try {
+      const { courseId, moduleId, lessonId } = req.params;
+      logger.info(`Accessing quizzes for course: ${courseId}, module: ${moduleId}, lesson: ${lessonId}`);
+
+      const quizzes = await quizService.getQuizByLesson(courseId, moduleId, lessonId);
+      
+      if (!quizzes.length) {
+        logger.warn(`No quizzes found for lesson ${lessonId}`);
+        return res.status(404).json({ 
+          success: false, 
+          message: 'No quizzes found for this lesson.' 
+        });
+      }
+
+      logger.info(`Successfully retrieved ${quizzes.length} quizzes for lesson ${lessonId}`);
+      res.status(200).json({
+        success: true,
+        data: quizzes,
+        message: 'Quizzes retrieved successfully'
+      });
+    } catch (error) {
+      logger.error(`Failed to fetch quizzes for lesson ${req.params.lessonId}:`, error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to fetch quizzes',
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
