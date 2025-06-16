@@ -1,425 +1,421 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
-const FirestoreServices = require('./services/firestoreServices');
+require('dotenv').config();
+const logger = require('./utils/logger');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Middleware
-// app.use(cors({
-//   //origin: ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5500'],
-//   credentials: true
-// }));
-//new Middleware
-app.use(cors())
+// ================================
+// MIDDLEWARE
+// ================================
 
-app.use(express.json());
+// Security middleware
+app.use(helmet());
+
+// CORS configuration
+app.use(cors({
+    origin: process.env.FRONTEND_URL || ['http://localhost:3000', 'http://127.0.0.1:3000', 'http://localhost:5500'],
+    credentials: true
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.'
+});
+app.use('/api', limiter);
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+    logger.info(`📥 ${req.method} ${req.path}`, {
+        ip: req.ip,
+        userAgent: req.get('user-agent')
+    });
+    next();
+});
 
 // Serve static files from the public directory
 app.use(express.static('public'));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Input validation middleware
+// ================================
+// VALIDATION MIDDLEWARE
+// ================================
+
 const validateEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
 };
 
 const validateRequired = (fields, body) => {
-  const missing = fields.filter(field => !body[field] || body[field].trim() === '');
-  return missing.length === 0 ? null : missing;
+    const missing = fields.filter(field => !body[field] || body[field].trim() === '');
+    return missing.length === 0 ? null : missing;
 };
 
 // Error handling middleware
 const asyncHandler = (fn) => (req, res, next) => {
-  Promise.resolve(fn(req, res, next)).catch(next);
+    Promise.resolve(fn(req, res, next)).catch(next);
 };
 
-// Routes
+// ================================
+// SERVICES IMPORT
+// ================================
+
+// Import services
+const userService = require('./services/firestore/userService');
+const courseService = require('./services/firestore/courseService');
+const moduleService = require('./services/firestore/moduleService');
+const lessonService = require('./services/firestore/lessonService');
+const quizService = require('./services/firestore/quizServices'); // Note: using your file name
+const enrollmentService = require('./services/firestore/enrollmentService');
+
+// ================================
+// ROUTES INTEGRATION
+// ================================
+
+// Import route files
+const userRoutes = require('./routes/userRoutes');
+const courseRoutes = require('./routes/courseRoutes');
+const moduleRoutes = require('./routes/moduleRoutes');
+const lessonRoutes = require('./routes/lessonRoutes');
+const quizRoutes = require('./routes/quizzesRoutes');
+const enrollmentRoutes = require('./routes/enrollmentRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+
+// Register routes with API prefix
+app.use('/api/users', userRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/modules', moduleRoutes);
+app.use('/api/lessons', lessonRoutes);
+app.use('/api/quizzes', quizRoutes);
+app.use('/api/enrollments', enrollmentRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+
+// ================================
+// NESTED QUIZ ROUTES
+// ================================
+
+const quizController = require('./controllers/quizController');
+
+// Get quizzes for a lesson
+app.get('/api/courses/:courseId/modules/:moduleId/lessons/:lessonId/quizzes', 
+    asyncHandler(async (req, res) => {
+        const { lessonId } = req.params;
+        req.params.lessonId = lessonId;
+        await quizController.getQuizzesByLesson(req, res);
+    })
+);
+
+// Create quiz within lesson
+app.post('/api/courses/:courseId/modules/:moduleId/lessons/:lessonId/quizzes', 
+    asyncHandler(async (req, res) => {
+        const { courseId, moduleId, lessonId } = req.params;
+        req.body = { ...req.body, courseId, moduleId, lessonId };
+        await quizController.createQuiz(req, res);
+    })
+);
+
+// Get specific quiz
+app.get('/api/courses/:courseId/modules/:moduleId/lessons/:lessonId/quizzes/:quizId', 
+    asyncHandler(async (req, res) => {
+        const { quizId } = req.params;
+        req.params.id = quizId;
+        await quizController.getQuizById(req, res);
+    })
+);
+
+// Submit quiz attempt
+app.post('/api/courses/:courseId/modules/:moduleId/lessons/:lessonId/quizzes/:quizId/attempt', 
+    asyncHandler(async (req, res) => {
+        const { courseId, moduleId, lessonId, quizId } = req.params;
+        req.body = { ...req.body, courseId, moduleId, lessonId };
+        req.params.quizId = quizId;
+        await quizController.submitQuizAttempt(req, res);
+    })
+);
+
+// ================================
+// HEALTH CHECK ENDPOINT
+// ================================
+
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        success: true,
+        message: 'Server is running',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
+// ================================
+// DASHBOARD & STATISTICS
+// ================================
 
 // API Documentation
 app.get('/api', (req, res) => {
-  res.json({
-    success: true,
-    message: 'TechLaunch API Documentation',
-    version: '1.0.0',
-    endpoints: {
-      users: {
-        'GET /api/users': 'Get all users',
-        'POST /api/users': 'Create a new user'
-      },
-      courses: {
-        'GET /api/courses': 'Get all courses',
-        'POST /api/courses': 'Create a new course'
-      },
-      enrollments: {
-        'POST /api/enroll': 'Enroll a user in a course'
-      },
-      dashboard: {
-        'GET /api/dashboard/stats': 'Get dashboard statistics',
-        'GET /api/dashboard/activity': 'Get recent activity'
-      },
-      system: {
-        'GET /api/health': 'Check API health status'
-      }
-    }
-  });
+    res.json({
+        success: true,
+        message: 'TechLaunch API Documentation',
+        version: '1.0.0',
+        endpoints: {
+            users: {
+                'GET /api/users': 'Get all users',
+                'POST /api/users': 'Create a new user'
+            },
+            courses: {
+                'GET /api/courses': 'Get all courses',
+                'POST /api/courses': 'Create a new course'
+            },
+            modules: {
+                'GET /api/modules': 'Get all modules',
+                'POST /api/modules': 'Create a new module'
+            },
+            lessons: {
+                'GET /api/lessons': 'Get all lessons',
+                'POST /api/lessons': 'Create a new lesson'
+            },
+            quizzes: {
+                'GET /api/quizzes': 'Get all quizzes',
+                'POST /api/quizzes': 'Create a new quiz'
+            },
+            enrollments: {
+                'GET /api/enrollments': 'Get all enrollments',
+                'POST /api/enrollments': 'Create a new enrollment'
+            },
+            dashboard: {
+                'GET /api/dashboard/stats': 'Get dashboard statistics',
+                'GET /api/dashboard/activity': 'Get recent activity'
+            },
+            health: {
+                'GET /api/health': 'Health check endpoint'
+            }
+        }
+    });
 });
 
-// Serve dashboard HTML
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/dashboard.html'));
-});
-
-// Get all users
-app.get('/api/users', asyncHandler(async (req, res) => {
-  try {
-    const users = await FirestoreServices.getAllUsers();
-    res.json({
-      success: true,
-      data: users,
-      count: users.length
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-      error: 'Failed to retrieve users'
-    });
-  }
-}));
-
-// Get all courses
-app.get('/api/courses', asyncHandler(async (req, res) => {
-  try {
-    const courses = await FirestoreServices.getAllCourses();
-    res.json({
-      success: true,
-      data: courses,
-      count: courses.length
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-      error: 'Failed to retrieve courses'
-    });
-  }
-}));
-
-// Get all modules
-app.get('/api/modules', asyncHandler(async (req, res) => {
-  try {
-    const modules = await FirestoreServices.getAllModules();
-    res.json({ success: true, data: modules, count: modules.length });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-}));
-
-// Get specific module by ID
-app.get('/api/modules/:moduleId', asyncHandler(async (req, res) => {
-  const { moduleId } = req.params;
-  try {
-    const module = await FirestoreServices.getModuleById(moduleId);
-    if (!module) {
-      return res.status(404).json({
-        success: false,
-        message: 'Module not found'
-      });
-    }
-    res.json({
-      success: true,
-      data: module
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-      error: 'Failed to retrieve module'
-    });
-  }
-}));
-
-// Get modules for a specific course
-app.get('/api/courses/:courseId/modules', asyncHandler(async (req, res) => {
-  const { courseId } = req.params;
-  try {
-    const modules = await FirestoreServices.getModulesByCourseId(courseId);
-    res.json({ success: true, data: modules });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-}));
-
-// Get all lessons
-app.get('/api/lessons', asyncHandler(async (req, res) => {
-  try {
-    const lessons = await FirestoreServices.getAllLessons();
-    res.json({ success: true, data: lessons });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-}));
-
-// Get lessons for a specific module
-app.get('/api/modules/:moduleId/lessons', asyncHandler(async (req, res) => {
-  const { moduleId } = req.params;
-  try {
-    const lessons = await FirestoreServices.getLessonsByModuleId(moduleId);
-    res.json({ success: true, data: lessons });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-}));
-
-//  Optional: Get lessons by courseId + moduleId
-app.get('/api/courses/:courseId/modules/:moduleId/lessons', asyncHandler(async (req, res) => {
-  const { courseId, moduleId } = req.params;
-  try {
-    const lessons = await FirestoreServices.getLessonsByCourseAndModule(courseId, moduleId);
-    res.json({ success: true, data: lessons });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-}));
-
-// Get dashboard statistics
+// Dashboard statistics including quizzes
 app.get('/api/dashboard/stats', asyncHandler(async (req, res) => {
-  try {
-    const stats = await FirestoreServices.getDashboardStats();
-    res.json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-      error: 'Failed to retrieve dashboard statistics'
-    });
-  }
+    try {
+        // Get all stats in parallel
+        const [users, courses, modules, lessons, quizzes, enrollments] = await Promise.all([
+            userService.getAllUsers(),
+            courseService.getAllCourses(),
+            moduleService.getAllModules(),
+            lessonService.getAllLessons(),
+            quizService.getAllQuizzes(),
+            enrollmentService.getAllEnrollments()
+        ]);
+
+        // Calculate statistics
+        const stats = {
+            users: {
+                total: users.length,
+                active: users.filter(user => user.isActive !== false).length
+            },
+            courses: {
+                total: courses.length,
+                published: courses.filter(course => course.isPublished === true).length
+            },
+            modules: {
+                total: modules.length
+            },
+            lessons: {
+                total: lessons.length
+            },
+            quizzes: {
+                total: quizzes.length,
+                active: quizzes.filter(quiz => quiz.isActive !== false).length
+            },
+            enrollments: {
+                total: enrollments.length
+            }
+        };
+
+        res.json({
+            success: true,
+            data: stats
+        });
+    } catch (error) {
+        logger.error('Failed to retrieve dashboard statistics:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve dashboard statistics',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
 }));
 
-// Get recent activity
+// Recent activity endpoint
 app.get('/api/dashboard/activity', asyncHandler(async (req, res) => {
-  try {
-    const activity = await FirestoreServices.getRecentActivity();
+    try {
+        // You can implement this based on your needs
+        // For now, returning a placeholder
+        const recentActivity = [
+            {
+                type: 'enrollment',
+                message: 'New user enrolled in course',
+                timestamp: new Date().toISOString()
+            }
+        ];
+
+        res.json({
+            success: true,
+            data: recentActivity
+        });
+    } catch (error) {
+        logger.error('Failed to retrieve recent activity:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve recent activity',
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+}));
+
+// ================================
+// ROOT ENDPOINT
+// ================================
+
+app.get('/', (req, res) => {
     res.json({
-      success: true,
-      data: activity
+        message: 'Learning Management System API',
+        version: '1.0.0',
+        status: 'running',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            users: '/api/users',
+            courses: '/api/courses',
+            modules: '/api/modules',
+            lessons: '/api/lessons',
+            quizzes: '/api/quizzes',
+            enrollments: '/api/enrollments',
+            dashboard: '/api/dashboard',
+            health: '/api/health',
+            docs: '/api'
+        }
     });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-      error: 'Failed to retrieve recent activity'
-    });
-  }
-}));
-
-// Enroll user in course
-app.post('/api/enroll', asyncHandler(async (req, res) => {
-  try {
-    const { email, courseName } = req.body;
-    
-    // Validate required fields
-    const missingFields = validateRequired(['email', 'courseName'], req.body);
-    if (missingFields) {
-      return res.status(400).json({
-        success: false,
-        message: `Missing required fields: ${missingFields.join(', ')}`,
-        error: 'Validation failed'
-      });
-    }
-    
-    // Validate email format
-    if (!validateEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid email format',
-        error: 'Validation failed'
-      });
-    }
-    
-    const result = await FirestoreServices.enrollUserInCourse(email.trim(), courseName.trim());
-    
-    res.json({
-      success: true,
-      message: result.message,
-      data: result
-    });
-  } catch (error) {
-    const statusCode = error.message.includes('not found') ? 404 : 
-                      error.message.includes('already enrolled') ? 409 : 500;
-    
-    res.status(statusCode).json({
-      success: false,
-      message: error.message,
-      error: 'Enrollment failed'
-    });
-  }
-}));
-
-// Create new user
-app.post('/api/users', asyncHandler(async (req, res) => {
-  try {
-    const { userId, username, email } = req.body;
-    
-    // Validate required fields
-    const missingFields = validateRequired(['userId', 'username', 'email'], req.body);
-    if (missingFields) {
-      return res.status(400).json({
-        success: false,
-        message: `Missing required fields: ${missingFields.join(', ')}`,
-        error: 'Validation failed'
-      });
-    }
-    
-    // Validate email format
-    if (!validateEmail(email)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid email format',
-        error: 'Validation failed'
-      });
-    }
-    
-    const newUser = await FirestoreServices.createUser({
-      userId: userId.trim(),
-      username: username.trim(),
-      email: email.trim()
-    });
-    
-    res.status(201).json({
-      success: true,
-      message: 'User created successfully',
-      data: newUser
-    });
-  } catch (error) {
-    const statusCode = error.message.includes('already exists') ? 409 : 500;
-    
-    res.status(statusCode).json({
-      success: false,
-      message: error.message,
-      error: 'User creation failed'
-    });
-  }
-}));
-
-// Create new course
-app.post('/api/courses', asyncHandler(async (req, res) => {
-  try {
-    const { courseId, courseName, description } = req.body;
-    
-    // Validate required fields
-    const missingFields = validateRequired(['courseId', 'courseName', 'description'], req.body);
-    if (missingFields) {
-      return res.status(400).json({
-        success: false,
-        message: `Missing required fields: ${missingFields.join(', ')}`,
-        error: 'Validation failed'
-      });
-    }
-    
-    const newCourse = await FirestoreServices.createCourse({
-      courseId: courseId.trim(),
-      courseName: courseName.trim(),
-      description: description.trim()
-    });
-    
-    res.status(201).json({
-      success: true,
-      message: 'Course created successfully',
-      data: newCourse
-    });
-  } catch (error) {
-    const statusCode = error.message.includes('already exists') ? 409 : 500;
-    
-    res.status(statusCode).json({
-      success: false,
-      message: error.message,
-      error: 'Course creation failed'
-    });
-  }
-}));
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    message: 'TechLaunch API is running',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
 });
 
-// Debug endpoint to list all modules
-app.get('/api/debug/modules', asyncHandler(async (req, res) => {
-  try {
-    const modules = await FirestoreServices.debugListAllModules();
-    res.json({
-      success: true,
-      data: modules,
-      count: modules.length
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-      error: 'Failed to list modules'
-    });
-  }
-}));
-
-// Migrate lessons to consistent structure
-app.post('/api/modules/:moduleId/migrate-lessons', asyncHandler(async (req, res) => {
-  const { moduleId } = req.params;
-  try {
-    const result = await FirestoreServices.migrateLessonsToConsistentStructure(moduleId);
-    res.json({
-      success: true,
-      message: result.message,
-      data: result
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message,
-      error: 'Failed to migrate lessons'
-    });
-  }
-}));
-
-// Global error handler
-app.use((error, req, res, next) => {
-  console.error('🔥 Global error handler:', error);
-  
-  res.status(500).json({
-    success: false,
-    message: 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
-  });
-});
+// ================================
+// ERROR HANDLING
+// ================================
 
 // 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Endpoint not found',
-    error: `Cannot ${req.method} ${req.originalUrl}`
-  });
+    logger.warn('404 - Endpoint not found', { 
+        method: req.method, 
+        url: req.originalUrl, 
+        ip: req.ip 
+    });
+    
+    res.status(404).json({
+        success: false,
+        message: 'Endpoint not found',
+        path: req.originalUrl,
+        availableEndpoints: {
+            docs: '/api',
+            health: '/api/health',
+            users: '/api/users',
+            courses: '/api/courses',
+            modules: '/api/modules',
+            lessons: '/api/lessons',
+            quizzes: '/api/quizzes',
+            enrollments: '/api/enrollments',
+            dashboard: '/api/dashboard'
+        }
+    });
 });
 
+// Global error handler
+app.use((error, req, res, next) => {
+    logger.error('🔥 Global error handler:', { 
+        error: error.message,
+        stack: error.stack,
+        path: req.originalUrl,
+        method: req.method,
+        status: error.status || 500
+    });
+    
+    res.status(error.status || 500).json({
+        success: false,
+        message: error.message || 'Internal Server Error',
+        error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
+});
+
+// ================================
+// SERVER STARTUP & SHUTDOWN
+// ================================
+
+// Graceful shutdown handler
+const gracefulShutdown = (signal) => {
+    logger.info(`🛑 Received ${signal}. Starting graceful shutdown...`);
+    
+    server.close(() => {
+        logger.info('✅ HTTP server closed.');
+        process.exit(0);
+    });
+    
+    // Force close after 10 seconds
+    setTimeout(() => {
+        logger.error('❌ Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+    }, 10000);
+};
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log('📝 Available endpoints:');
-  console.log('  GET  /api/modules');
-  console.log('  GET  /api/courses/:courseId/modules');
-  console.log('  GET  /api/modules/:moduleId/lessons');
-  console.log('  GET  /api/courses/:courseId/modules/:moduleId/lessons');
+const server = app.listen(PORT, () => {
+    logger.info(`🚀 Server running on port ${PORT}`);
+    logger.info(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.info(`🔗 API Base URL: http://localhost:${PORT}/api`);
+    logger.info(`📊 Health Check: http://localhost:${PORT}/api/health`);
+    logger.info('📝 Available endpoints:', {
+        endpoints: [
+            'GET  /',
+            'GET  /api',
+            'GET  /api/health',
+            'GET  /api/users',
+            'GET  /api/courses',
+            'GET  /api/modules',
+            'GET  /api/lessons',
+            'GET  /api/quizzes',
+            'GET  /api/enrollments',
+            'GET  /api/dashboard/stats',
+            'GET  /api/dashboard/activity'
+        ]
+    });
+});
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('❌ Unhandled Rejection:', {
+        reason: reason,
+        promise: promise
+    });
+    gracefulShutdown('unhandledRejection');
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    logger.error('❌ Uncaught Exception:', {
+        error: error.message,
+        stack: error.stack
+    });
+    gracefulShutdown('uncaughtException');
 });
 
 module.exports = app;

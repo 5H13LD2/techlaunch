@@ -3,99 +3,56 @@
 //================
 
 // courseManagement.js
-// Course Management Module following the same pattern as moduleManagement.js
+// Course Management Module using backend API
+
+import { showLoading, hideLoading, showToast } from './display.js';
+import { apiCall } from './api.js';
+import { closeModal } from './dom.js';
 
 const API_BASE_URL = 'http://localhost:3001/api';
 
-// Utility functions
-const showLoading = () => {
-    const spinner = document.getElementById('loading-spinner');
-    if (spinner) spinner.style.display = 'flex';
-};
+let courses = [];
 
-const hideLoading = () => {
-    const spinner = document.getElementById('loading-spinner');
-    if (spinner) spinner.style.display = 'none';
-};
-
-const showToast = (message, type = 'success') => {
-    // Simple alert for now - can be enhanced with proper toast notifications
-    if (type === 'error') {
-        alert(`Error: ${message}`);
-    } else {
-        alert(message);
-    }
-};
-
-// Course Management Class
-export class CourseManager {
-    static courses = [];
-
-    // Initialize the course manager
-    static async init() {
-        await this.loadCourses();
-    }
-
-    // Load all courses from API
-    static async loadCourses() {
-        showLoading();
-        try {
-            const response = await fetch(`${API_BASE_URL}/courses`);
-            const data = await response.json();
+// Load all courses from backend API
+export const loadCourses = async () => {
+    try {
+        showLoading('📚 Loading courses...');
+        const response = await apiCall('/courses');
+        
+        if (response.success) {
+            courses = response.data.map(course => ({
+                ...course,
+                enrolledCount: course.enrolledUsers?.length || 0
+            }));
             
-            const coursesGrid = document.getElementById('courses-grid');
-            if (!coursesGrid) return;
-
-            coursesGrid.innerHTML = '';
-
-            if (data.success && data.data && data.data.length > 0) {
-                this.courses = data.data;
-                this.displayCourses(data.data);
-            } else {
-                this.showEmptyState();
+            // Update UI elements
+            const totalCoursesElement = document.getElementById('total-courses');
+            if (totalCoursesElement) {
+                totalCoursesElement.textContent = courses.length;
             }
-        } catch (error) {
-            console.error('Error loading courses:', error);
-            this.showErrorState();
-        } finally {
-            hideLoading();
+            
+            displayCourses(courses);
+            populateCourseSelect();
+            showToast('✅ Courses loaded successfully');
+            return courses;
+        } else {
+            throw new Error(response.message || 'Failed to load courses');
         }
+    } catch (error) {
+        console.error('❌ Error loading courses:', error);
+        showToast('Failed to load courses ❌', 'error');
+        throw error;
+    } finally {
+        hideLoading();
     }
+};
 
-    // Display courses in grid
-    static displayCourses(courses) {
-        const coursesGrid = document.getElementById('courses-grid');
-        if (!coursesGrid) return;
-
-        coursesGrid.innerHTML = courses.map(course => `
-            <div class="course-card">
-                <h3>${course.name || 'Untitled Course'}</h3>
-                <p>${course.description || 'No description available'}</p>
-                <div class="course-users">
-                    <i class="fas fa-users"></i>
-                    <span>${course.enrolledUsers || 0} enrolled users</span>
-                </div>
-                <div class="course-info">
-                    <strong>Course ID:</strong> ${course.id}
-                    ${course.createdAt ? `<br><strong>Created:</strong> ${new Date(course.createdAt).toLocaleDateString()}` : ''}
-                </div>
-                <div class="course-actions">
-                    <button class="btn btn-outline-primary" onclick="editCourse('${course.id}')">
-                        <i class="fas fa-edit"></i> Edit
-                    </button>
-                    <button class="btn btn-outline-danger" onclick="deleteCourse('${course.id}')">
-                        <i class="fas fa-trash"></i> Delete
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    // Show empty state when no courses
-    static showEmptyState() {
-        const coursesGrid = document.getElementById('courses-grid');
-        if (!coursesGrid) return;
-
+// Display courses in grid
+export const displayCourses = (courseList = courses) => {
+    const coursesGrid = document.getElementById('courses-grid');
+    if (!coursesGrid) return;
+    
+    if (!courseList || courseList.length === 0) {
         coursesGrid.innerHTML = `
             <div class="empty-state">
                 <i class="fas fa-book-open"></i>
@@ -103,183 +60,315 @@ export class CourseManager {
                 <p>Get started by creating your first course using the "Add Course" button above.</p>
             </div>
         `;
+        return;
     }
-
-    // Show error state when loading fails
-    static showErrorState() {
-        const coursesGrid = document.getElementById('courses-grid');
-        if (!coursesGrid) return;
-
-        coursesGrid.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle"></i>
-                <h3>Failed to Load Courses</h3>
-                <p>Unable to connect to the server. Please check your connection and try again.</p>
-                <button class="btn btn-primary mt-3" onclick="location.reload()">
-                    <i class="fas fa-refresh"></i> Retry
+    
+    coursesGrid.innerHTML = courseList.map(course => `
+        <div class="course-card">
+            <h3>${course.courseName || 'Untitled Course'}</h3>
+            <p>${course.description || 'No description available'}</p>
+            <div class="course-users">
+                <i class="fas fa-users"></i>
+                <span>${course.enrolledCount} enrolled users</span>
+            </div>
+            <div class="course-info">
+                <strong>Course ID:</strong> ${course.courseId}
+                ${course.createdAt ? `<br><strong>Created:</strong> ${new Date(course.createdAt).toLocaleDateString()}` : ''}
+            </div>
+            <div class="course-actions">
+                <button class="btn btn-outline-primary" onclick="window.editCourse('${course.id}')">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+                <button class="btn btn-outline-danger" onclick="window.deleteCourse('${course.id}')">
+                    <i class="fas fa-trash"></i> Delete
                 </button>
             </div>
-        `;
-    }
+        </div>
+    `).join('');
+};
 
-    // Create new course
-    static async createCourse(courseData) {
-        if (!courseData.id || !courseData.name || !courseData.description) {
-            showToast('Please fill in all fields', 'error');
-            return;
-        }
-
+// Create new course through backend API
+export const createCourse = async (courseData) => {
+    try {
         showLoading();
-        try {
-            const response = await fetch(`${API_BASE_URL}/courses`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(courseData)
-            });
+        const response = await apiCall('/api/courses', {
+            method: 'POST',
+            body: JSON.stringify({
+                courseId: courseData.courseId || `course_${Date.now()}`,
+                courseName: courseData.courseName,
+                description: courseData.description
+            })
+        });
 
-            const data = await response.json();
+        if (response.success) {
+            const createdCourse = {
+                ...response.data,
+                enrolledCount: 0
+            };
             
-            if (data.success) {
-                // Close modal and reset form
-                const modal = bootstrap.Modal.getInstance(document.getElementById('addCourseModal'));
-                if (modal) modal.hide();
-                
-                const form = document.getElementById('create-course-form');
-                if (form) form.reset();
-                
-                // Reload courses
-                await this.loadCourses();
-                showToast('Course created successfully!');
-            } else {
-                showToast(data.message || 'Error creating course', 'error');
-            }
-        } catch (error) {
-            console.error('Error creating course:', error);
-            showToast('Failed to create course. Please try again.', 'error');
-        } finally {
-            hideLoading();
+            // Add to local array
+            courses.push(createdCourse);
+            displayCourses(courses);
+            populateCourseSelect();
+            
+            showToast('✅ Course created successfully');
+            return createdCourse;
+        } else {
+            throw new Error(response.message || 'Failed to create course');
         }
+    } catch (error) {
+        console.error('❌ Error creating course:', error);
+        showToast('Failed to create course', 'error');
+        throw error;
+    } finally {
+        hideLoading();
     }
+};
 
-    // Update existing course
-    static async updateCourse(courseId, updateData) {
-        if (!updateData.name || !updateData.description) {
-            showToast('Please fill in all fields', 'error');
-            return;
-        }
-
+// Update course through backend API
+export const updateCourse = async (courseId, updateData) => {
+    try {
         showLoading();
-        try {
-            const response = await fetch(`${API_BASE_URL}/courses/${courseId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(updateData)
-            });
+        const response = await apiCall(`/api/courses/${courseId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updateData)
+        });
 
-            const data = await response.json();
-            
-            if (data.success) {
-                // Close modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('editCourseModal'));
-                if (modal) modal.hide();
-                
-                // Reload courses
-                await this.loadCourses();
-                showToast('Course updated successfully!');
-            } else {
-                showToast(data.message || 'Error updating course', 'error');
+        if (response.success) {
+            // Update local array
+            const courseIndex = courses.findIndex(course => course.id === courseId);
+            if (courseIndex !== -1) {
+                courses[courseIndex] = { 
+                    ...courses[courseIndex], 
+                    ...response.data,
+                    enrolledCount: response.data.enrolledUsers?.length || 0
+                };
+                displayCourses(courses);
+                populateCourseSelect();
             }
-        } catch (error) {
-            console.error('Error updating course:', error);
-            showToast('Failed to update course. Please try again.', 'error');
-        } finally {
-            hideLoading();
+            
+            showToast('✅ Course updated successfully');
+            return courses[courseIndex];
+        } else {
+            throw new Error(response.message || 'Failed to update course');
         }
+    } catch (error) {
+        console.error('❌ Error updating course:', error);
+        showToast('Failed to update course', 'error');
+        throw error;
+    } finally {
+        hideLoading();
     }
+};
 
-    // Delete course
-    static async deleteCourse(courseId) {
+// Delete course through backend API
+export const deleteCourse = async (courseId) => {
+    try {
         showLoading();
-        try {
-            const response = await fetch(`${API_BASE_URL}/courses/${courseId}`, {
-                method: 'DELETE'
-            });
+        const response = await apiCall(`/api/courses/${courseId}`, {
+            method: 'DELETE'
+        });
 
-            const data = await response.json();
+        if (response.success) {
+            // Remove from local array
+            courses = courses.filter(course => course.id !== courseId);
+            displayCourses(courses);
+            populateCourseSelect();
             
-            if (data.success) {
-                await this.loadCourses();
-                showToast('Course deleted successfully!');
-            } else {
-                showToast(data.message || 'Error deleting course', 'error');
-            }
-        } catch (error) {
-            console.error('Error deleting course:', error);
-            showToast('Failed to delete course. Please try again.', 'error');
-        } finally {
-            hideLoading();
+            showToast('✅ Course deleted successfully');
+            return true;
+        } else {
+            throw new Error(response.message || 'Failed to delete course');
         }
+    } catch (error) {
+        console.error('❌ Error deleting course:', error);
+        showToast('Failed to delete course', 'error');
+        throw error;
+    } finally {
+        hideLoading();
     }
+};
 
-    // Edit course - populate the edit modal
-    static async editCourse(courseId) {
-        showLoading();
-        try {
-            const response = await fetch(`${API_BASE_URL}/courses/${courseId}`);
-            const data = await response.json();
-            
-            if (data.success && data.data) {
-                // Populate edit form
-                document.getElementById('edit-course-id').value = data.data.id;
-                document.getElementById('edit-course-name').value = data.data.name || '';
-                document.getElementById('edit-course-description').value = data.data.description || '';
-                
-                // Show edit modal
-                const modal = new bootstrap.Modal(document.getElementById('editCourseModal'));
-                modal.show();
-            } else {
-                showToast('Failed to load course details', 'error');
-            }
-        } catch (error) {
-            console.error('Error loading course details:', error);
-            showToast('Failed to load course details', 'error');
-        } finally {
-            hideLoading();
-        }
+// Get course by ID from local array
+export const getCourseById = (courseId) => {
+    return courses.find(course => course.id === courseId);
+};
+
+// Get course by name from local array
+export const getCourseByName = (courseName) => {
+    return courses.find(course => course.courseName === courseName);
+};
+
+// Search courses in local array
+export const searchCourses = (searchTerm) => {
+    if (!searchTerm) return courses;
+    
+    const term = searchTerm.toLowerCase();
+    return courses.filter(course => 
+        course.courseName?.toLowerCase().includes(term) ||
+        course.description?.toLowerCase().includes(term) ||
+        course.courseId?.toLowerCase().includes(term)
+    );
+};
+
+// Filter courses based on search input
+export const filterCourses = () => {
+    const searchInput = document.getElementById('course-search');
+    if (!searchInput) return;
+    
+    const filteredCourses = searchCourses(searchInput.value);
+    displayCourses(filteredCourses);
+};
+
+// Populate course select dropdown
+export const populateCourseSelect = () => {
+    const courseSelect = document.getElementById('course-select');
+    if (!courseSelect) return;
+    
+    const options = courses.map(course => 
+        `<option value="${course.courseId}">${course.courseName}</option>`
+    ).join('');
+    
+    courseSelect.innerHTML = '<option value="">Select Course</option>' + options;
+};
+
+// Show create course modal
+export const showCreateCourseModal = () => {
+    const modal = document.getElementById('create-course-modal');
+    if (modal) {
+        modal.style.display = 'block';
     }
+};
 
-    // Get course by ID
-    static getCourseById(courseId) {
-        return this.courses.find(course => course.id === courseId);
+// Handle create course form submission
+export const handleCreateCourseForm = async (event) => {
+    event.preventDefault();
+    
+    const courseName = document.getElementById('new-course-name')?.value;
+    const description = document.getElementById('new-course-description')?.value;
+    
+    if (!courseName || !description) {
+        showToast('⚠️ Please fill in all fields', 'error');
+        return;
     }
-
-    // Get all courses
-    static getAllCourses() {
-        return this.courses;
+    
+    // Check if course already exists
+    if (getCourseByName(courseName)) {
+        showToast('⚠️ Course with this name already exists', 'error');
+        return;
     }
-
-    // Search courses
-    static searchCourses(searchTerm) {
-        if (!searchTerm) return this.courses;
+    
+    try {
+        await createCourse({ courseName, description });
         
-        const term = searchTerm.toLowerCase();
-        return this.courses.filter(course => 
-            course.name?.toLowerCase().includes(term) ||
-            course.description?.toLowerCase().includes(term) ||
-            course.id?.toLowerCase().includes(term)
-        );
+        // Close modal and reset form
+        const modal = document.getElementById('create-course-modal');
+        if (modal) modal.style.display = 'none';
+        
+        const form = document.getElementById('create-course-form');
+        if (form) form.reset();
+        
+    } catch (error) {
+        // Error handling is done in createCourse function
     }
+};
 
-    // Filter and display courses based on search
-    static filterCourses(searchTerm) {
-        const filteredCourses = this.searchCourses(searchTerm);
-        this.displayCourses(filteredCourses);
+// Get all courses from local array
+export const getAllCourses = () => courses;
+
+// Get courses count from local array
+export const getCoursesCount = () => courses.length;
+
+// Export for global access
+window.editCourse = function(courseId) {
+    console.log('🔍 Editing course:', courseId);
+    const course = getCourseById(courseId);
+    if (course) {
+        // Populate edit form
+        document.getElementById('edit-course-name').value = course.courseName || '';
+        document.getElementById('edit-course-description').value = course.description || '';
+        
+        // Show edit modal
+        const editModal = document.getElementById('edit-course-modal');
+        if (editModal) {
+            editModal.style.display = 'block';
+            editModal.setAttribute('data-course-id', courseId);
+        }
     }
-}
+};
 
-// Export for use in other modules
-export default CourseManager;
+window.deleteCourse = async function(courseId) {
+    if (confirm('⚠️ Are you sure you want to delete this course?')) {
+        try {
+            await deleteCourse(courseId);
+        } catch (error) {
+            // Error handling is done in deleteCourse function
+        }
+    }
+};
+
+// Handle course creation through API
+export const handleCreateCourse = async (event) => {
+    event.preventDefault();
+    
+    const form = event.target;
+    const courseName = form.querySelector('#course-name')?.value;
+    const description = form.querySelector('#course-description')?.value;
+    
+    if (!courseName || !description) {
+        showToast('⚠️ Please fill in all required fields', 'error');
+        return;
+    }
+    
+    try {
+        showLoading('📝 Creating course...');
+        const response = await apiCall('/courses', {
+            method: 'POST',
+            body: JSON.stringify({
+                courseName,
+                description,
+                status: 'active'
+            })
+        });
+        
+        if (response.success) {
+            showToast('✅ Course created successfully');
+            closeModal('create-course-modal');
+            form.reset();
+            await loadCourses(); // Refresh courses list
+        } else {
+            throw new Error(response.message || 'Failed to create course');
+        }
+    } catch (error) {
+        console.error('❌ Error creating course:', error);
+        showToast(error.message || 'Failed to create course ❌', 'error');
+    } finally {
+        hideLoading();
+    }
+};
+
+// Remove course through API
+export const removeCourse = async (courseId) => {
+    if (!confirm('⚠️ Are you sure you want to remove this course?')) {
+        return;
+    }
+    
+    try {
+        showLoading('🗑️ Removing course...');
+        const response = await apiCall(`/courses/${courseId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.success) {
+            showToast('✅ Course removed successfully');
+            await loadCourses(); // Refresh courses list
+        } else {
+            throw new Error(response.message || 'Failed to remove course');
+        }
+    } catch (error) {
+        console.error('❌ Error removing course:', error);
+        showToast(error.message || 'Failed to remove course ❌', 'error');
+    } finally {
+        hideLoading();
+    }
+};

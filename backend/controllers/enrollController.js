@@ -1,9 +1,7 @@
-const FirestoreService = require('../services/firestoreServices');
+const enrollmentService = require('../services/firestore/enrollmentService');
+const userService = require('../services/firestore/userService');
+const courseService = require('../services/firestore/courseService');
 const logger = require('../utils/logger');
-
-const enrollmentService = new FirestoreService('enrollments');
-const courseService = new FirestoreService('courses');
-const userService = new FirestoreService('users');
 
 const enrollController = {
     async enrollStudent(req, res) {
@@ -29,9 +27,9 @@ const enrollController = {
             }
 
             // Check if already enrolled
-            const existingEnrollments = await enrollmentService.getAll();
+            const existingEnrollments = await enrollmentService.getByUser(userId);
             const isEnrolled = existingEnrollments.some(
-                enrollment => enrollment.userId === userId && enrollment.courseId === courseId
+                enrollment => enrollment.courseId === courseId
             );
 
             if (isEnrolled) {
@@ -92,15 +90,11 @@ const enrollController = {
     async getEnrollmentsByUser(req, res) {
         try {
             const { userId } = req.params;
-            const enrollments = await enrollmentService.getAll();
+            const enrollments = await enrollmentService.getByUser(userId);
             
-            const userEnrollments = enrollments.filter(
-                enrollment => enrollment.userId === userId
-            );
-
             // Get course details for each enrollment
             const enrollmentsWithCourses = await Promise.all(
-                userEnrollments.map(async (enrollment) => {
+                enrollments.map(async (enrollment) => {
                     const course = await courseService.getById(enrollment.courseId);
                     return {
                         ...enrollment,
@@ -125,15 +119,11 @@ const enrollController = {
     async getEnrollmentsByCourse(req, res) {
         try {
             const { courseId } = req.params;
-            const enrollments = await enrollmentService.getAll();
+            const enrollments = await enrollmentService.getByCourse(courseId);
             
-            const courseEnrollments = enrollments.filter(
-                enrollment => enrollment.courseId === courseId
-            );
-
             // Get user details for each enrollment
             const enrollmentsWithUsers = await Promise.all(
-                courseEnrollments.map(async (enrollment) => {
+                enrollments.map(async (enrollment) => {
                     const user = await userService.getById(enrollment.userId);
                     return {
                         ...enrollment,

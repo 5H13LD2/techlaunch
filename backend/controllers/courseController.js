@@ -1,4 +1,4 @@
-const FirestoreService = require('../services/firestoreServices');
+const FirestoreService = require('../services/firestore/courseService');
 const logger = require('../utils/logger');
 
 const courseService = new FirestoreService('courses');

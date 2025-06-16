@@ -1,4 +1,4 @@
-const firestoreService = require('../services/firestoreServices');
+const userService = require('../services/firestore/userService');
 const logger = require('../utils/logger');
 
 class UserController {
@@ -9,7 +9,7 @@ class UserController {
   async getAllUsers(req, res) {
     try {
       logger.debug('UserController: Getting all users');
-      const users = await firestoreService.getAllUsers();
+      const users = await userService.getAll();
       
       res.status(200).json({
         success: true,
@@ -36,7 +36,7 @@ class UserController {
       const { email } = req.params;
       logger.debug(`UserController: Getting user by email: ${email}`);
       
-      const user = await firestoreService.getUserByEmail(email);
+      const user = await userService.getByEmail(email);
       
       if (!user) {
         return res.status(404).json({
@@ -69,7 +69,7 @@ class UserController {
       const userData = req.body;
       logger.debug(`UserController: Creating new user: ${userData.email}`);
       
-      const newUser = await firestoreService.createUser(userData);
+      const newUser = await userService.create(userData);
       
       res.status(201).json({
         success: true,
@@ -103,7 +103,7 @@ class UserController {
       const { email } = req.params;
       logger.debug(`UserController: Getting courses for user: ${email}`);
       
-      const user = await firestoreService.getUserByEmail(email);
+      const user = await userService.getByEmail(email);
       
       if (!user) {
         return res.status(404).json({
@@ -140,7 +140,7 @@ class UserController {
   async getUserStats(req, res) {
     try {
       logger.debug('UserController: Getting user statistics');
-      const users = await firestoreService.getAllUsers();
+      const users = await userService.getAll();
       
       const stats = {
         totalUsers: users.length,

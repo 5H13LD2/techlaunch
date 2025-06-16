@@ -1,39 +1,36 @@
-import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js';
-import { db } from './api.js';
 import { showLoading, hideLoading, showToast } from './display.js';
 import { apiCall } from './api.js';
 import { showToast as domShowToast, closeModal } from './dom.js';
-import { fetchUsers, users } from './dataManager.js';
 
 let users = [];
 
-// Load all users from Firebase
+// Load all users from backend API
 export const loadUsers = async () => {
     try {
         showLoading();
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        users = [];
-        usersSnapshot.forEach(doc => {
-            const userData = doc.data();
-            users.push({ 
-                id: doc.id, 
-                ...userData,
-                coursesCount: userData.courseTaken ? userData.courseTaken.length : 0
-            });
-        });
+        const response = await apiCall('/api/users');
         
-        // Update UI elements
-        const totalUsersElement = document.getElementById('total-users');
-        if (totalUsersElement) {
-            totalUsersElement.textContent = users.length;
+        if (response.success) {
+            users = response.data.map(user => ({
+                ...user,
+                coursesCount: user.coursesTaken ? user.coursesTaken.length : 0
+            }));
+            
+            // Update UI elements
+            const totalUsersElement = document.getElementById('total-users');
+            if (totalUsersElement) {
+                totalUsersElement.textContent = users.length;
+            }
+            
+            displayUsers(users);
+            populateUserSelect();
+            showToast('✅ Users loaded successfully');
+            return users;
+        } else {
+            throw new Error(response.message || 'Failed to load users');
         }
-        
-        displayUsers(users);
-        populateUserSelect();
-        showToast('Users loaded successfully');
-        return users;
     } catch (error) {
-        console.error('Error loading users:', error);
+        console.error('❌ Error loading users:', error);
         showToast('Failed to load users', 'error');
         throw error;
     } finally {
@@ -57,7 +54,7 @@ export const displayUsers = (userList = users) => {
             <td>${user.username || 'N/A'}</td>
             <td>
                 <div class="user-courses">
-                    ${(user.courseTaken || []).map(course => 
+                    ${(user.coursesTaken || []).map(course => 
                         `<span class="course-tag">${course}</span>`
                     ).join('')}
                     <small>(${user.coursesCount} courses)</small>
@@ -75,32 +72,37 @@ export const displayUsers = (userList = users) => {
     `).join('');
 };
 
-// Create new user
+// Create new user through backend API
 export const createUser = async (userData) => {
     try {
         showLoading();
-        const newUser = {
-            username: userData.username,
-            email: userData.email,
-            createdAt: new Date().toISOString(),
-            courseTaken: [],
-            isEnrolled: false,
-            lastEnrollmentTime: null,
-            ...userData
-        };
-        
-        const docRef = await addDoc(collection(db, 'users'), newUser);
-        const createdUser = { id: docRef.id, ...newUser };
-        
-        // Add to local array
-        users.push(createdUser);
-        displayUsers(users);
-        populateUserSelect();
-        
-        showToast('User created successfully');
-        return createdUser;
+        const response = await apiCall('/api/users', {
+            method: 'POST',
+            body: JSON.stringify({
+                userId: userData.userId || `user_${Date.now()}`,
+                username: userData.username,
+                email: userData.email
+            })
+        });
+
+        if (response.success) {
+            const createdUser = {
+                ...response.data,
+                coursesCount: 0
+            };
+            
+            // Add to local array
+            users.push(createdUser);
+            displayUsers(users);
+            populateUserSelect();
+            
+            showToast('✅ User created successfully');
+            return createdUser;
+        } else {
+            throw new Error(response.message || 'Failed to create user');
+        }
     } catch (error) {
-        console.error('Error creating user:', error);
+        console.error('❌ Error creating user:', error);
         showToast('Failed to create user', 'error');
         throw error;
     } finally {
@@ -108,28 +110,35 @@ export const createUser = async (userData) => {
     }
 };
 
-// Update user
+// Update user through backend API
 export const updateUser = async (userId, updateData) => {
     try {
         showLoading();
-        const userRef = doc(db, 'users', userId);
-        await updateDoc(userRef, {
-            ...updateData,
-            updatedAt: new Date().toISOString()
+        const response = await apiCall(`/api/users/${userId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updateData)
         });
-        
-        // Update local array
-        const userIndex = users.findIndex(user => user.id === userId);
-        if (userIndex !== -1) {
-            users[userIndex] = { ...users[userIndex], ...updateData };
-            displayUsers(users);
-            populateUserSelect();
+
+        if (response.success) {
+            // Update local array
+            const userIndex = users.findIndex(user => user.id === userId);
+            if (userIndex !== -1) {
+                users[userIndex] = { 
+                    ...users[userIndex], 
+                    ...response.data,
+                    coursesCount: response.data.coursesTaken?.length || 0
+                };
+                displayUsers(users);
+                populateUserSelect();
+            }
+            
+            showToast('✅ User updated successfully');
+            return users[userIndex];
+        } else {
+            throw new Error(response.message || 'Failed to update user');
         }
-        
-        showToast('User updated successfully');
-        return users[userIndex];
     } catch (error) {
-        console.error('Error updating user:', error);
+        console.error('❌ Error updating user:', error);
         showToast('Failed to update user', 'error');
         throw error;
     } finally {
@@ -137,21 +146,27 @@ export const updateUser = async (userId, updateData) => {
     }
 };
 
-// Delete user
+// Delete user through backend API
 export const deleteUser = async (userId) => {
     try {
         showLoading();
-        await deleteDoc(doc(db, 'users', userId));
-        
-        // Remove from local array
-        users = users.filter(user => user.id !== userId);
-        displayUsers(users);
-        populateUserSelect();
-        
-        showToast('User deleted successfully');
-        return true;
+        const response = await apiCall(`/api/users/${userId}`, {
+            method: 'DELETE'
+        });
+
+        if (response.success) {
+            // Remove from local array
+            users = users.filter(user => user.id !== userId);
+            displayUsers(users);
+            populateUserSelect();
+            
+            showToast('✅ User deleted successfully');
+            return true;
+        } else {
+            throw new Error(response.message || 'Failed to delete user');
+        }
     } catch (error) {
-        console.error('Error deleting user:', error);
+        console.error('❌ Error deleting user:', error);
         showToast('Failed to delete user', 'error');
         throw error;
     } finally {
@@ -159,17 +174,17 @@ export const deleteUser = async (userId) => {
     }
 };
 
-// Get user by ID
+// Get user by ID from local array
 export const getUserById = (userId) => {
     return users.find(user => user.id === userId);
 };
 
-// Get user by email
+// Get user by email from local array
 export const getUserByEmail = (email) => {
     return users.find(user => user.email === email);
 };
 
-// Search users
+// Search users in local array
 export const searchUsers = (searchTerm) => {
     if (!searchTerm) return users;
     
@@ -177,11 +192,11 @@ export const searchUsers = (searchTerm) => {
     return users.filter(user => 
         user.username?.toLowerCase().includes(term) ||
         user.email?.toLowerCase().includes(term) ||
-        (user.courseTaken || []).some(course => course.toLowerCase().includes(term))
+        (user.coursesTaken || []).some(course => course.toLowerCase().includes(term))
     );
 };
 
-// Filter users
+// Filter users based on search input
 export const filterUsers = () => {
     const searchInput = document.getElementById('user-search');
     if (!searchInput) return;
@@ -218,13 +233,13 @@ export const handleCreateUserForm = async (event) => {
     const email = document.getElementById('new-email')?.value;
     
     if (!username || !email) {
-        showToast('Please fill in all fields', 'error');
+        showToast('⚠️ Please fill in all fields', 'error');
         return;
     }
     
     // Check if user already exists
     if (getUserByEmail(email)) {
-        showToast('User with this email already exists', 'error');
+        showToast('⚠️ User with this email already exists', 'error');
         return;
     }
     
@@ -243,15 +258,15 @@ export const handleCreateUserForm = async (event) => {
     }
 };
 
-// Get all users
+// Get all users from local array
 export const getAllUsers = () => users;
 
-// Get users count
+// Get users count from local array
 export const getUsersCount = () => users.length;
 
 // Export for global access
 window.editUser = function(userId) {
-    console.log('Editing user:', userId);
+    console.log('🔍 Editing user:', userId);
     const user = getUserById(userId);
     if (user) {
         // Populate edit form
@@ -268,7 +283,7 @@ window.editUser = function(userId) {
 };
 
 window.deleteUser = async function(userId) {
-    if (confirm('Are you sure you want to delete this user?')) {
+    if (confirm('⚠️ Are you sure you want to delete this user?')) {
         try {
             await deleteUser(userId);
         } catch (error) {
@@ -277,10 +292,7 @@ window.deleteUser = async function(userId) {
     }
 };
 
-/**
- * Handle user creation form submission
- * @param {Event} event - Form submission event
- */
+// Handle user creation through API
 export const handleCreateUser = async (event) => {
     event.preventDefault();
     
@@ -290,7 +302,7 @@ export const handleCreateUser = async (event) => {
     const email = form.querySelector('#user-email').value;
     
     try {
-        const response = await apiCall('/users', {
+        const response = await apiCall('/api/users', {
             method: 'POST',
             body: JSON.stringify({
                 userId,
@@ -300,23 +312,20 @@ export const handleCreateUser = async (event) => {
         });
         
         if (response.success) {
-            showToast('User created successfully');
+            showToast('✅ User created successfully');
             closeModal('create-user-modal');
             form.reset();
-            await fetchUsers(); // Refresh users list
+            await loadUsers(); // Refresh users list
         }
     } catch (error) {
-        console.error('Error creating user:', error);
+        console.error('❌ Error creating user:', error);
         showToast(error.message || 'Failed to create user', 'error');
     }
 };
 
-/**
- * Remove user by ID
- * @param {string} userId - User ID to remove
- */
+// Remove user through API
 export const removeUser = async (userId) => {
-    if (!confirm('Are you sure you want to remove this user?')) {
+    if (!confirm('⚠️ Are you sure you want to remove this user?')) {
         return;
     }
     
@@ -326,14 +335,18 @@ export const removeUser = async (userId) => {
             throw new Error('User not found');
         }
         
-        await apiCall(`/users/${userId}`, {
+        const response = await apiCall(`/api/users/${userId}`, {
             method: 'DELETE'
         });
         
-        showToast('User removed successfully');
-        await fetchUsers(); // Refresh users list
+        if (response.success) {
+            showToast('✅ User removed successfully');
+            await loadUsers(); // Refresh users list
+        } else {
+            throw new Error(response.message || 'Failed to remove user');
+        }
     } catch (error) {
-        console.error('Error removing user:', error);
+        console.error('❌ Error removing user:', error);
         showToast(error.message || 'Failed to remove user', 'error');
     }
 };

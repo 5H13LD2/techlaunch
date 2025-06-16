@@ -112,4 +112,84 @@ export const dashboardApi = {
             totalEnrollments: enrollments.size
         };
     }
+};
+
+// api.js - Utility functions for API calls
+
+const API_BASE_URL = 'http://localhost:3001/api';
+
+// Generic API call function
+export const apiCall = async (endpoint, options = {}) => {
+    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    
+    const defaultOptions = {
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        credentials: 'include'
+    };
+
+    try {
+        const response = await fetch(url, {
+            ...defaultOptions,
+            ...options,
+            headers: {
+                ...defaultOptions.headers,
+                ...options.headers
+            }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        }
+
+        return data;
+    } catch (error) {
+        console.error('❌ API call failed:', error);
+        throw error;
+    }
+};
+
+// Initialize Firebase (if needed)
+let firebaseInitialized = false;
+
+export const initializeFirebase = async () => {
+    if (firebaseInitialized) {
+        return;
+    }
+
+    try {
+        // Import Firebase dynamically only if needed
+        const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js');
+        const { getFirestore } = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+        
+        // Your Firebase config
+        const firebaseConfig = {
+            // Add your Firebase config here if needed
+            // We're moving away from direct Firebase usage, so this might not be needed
+        };
+
+        // Initialize Firebase only if config is provided
+        if (Object.keys(firebaseConfig).length > 0) {
+            const app = initializeApp(firebaseConfig);
+            const db = getFirestore(app);
+            firebaseInitialized = true;
+            return db;
+        }
+    } catch (error) {
+        console.warn('⚠️ Firebase initialization skipped:', error);
+    }
+    
+    return null;
+};
+
+// Export a function to get Firebase instance if needed
+export const getFirebaseInstance = async () => {
+    if (!firebaseInitialized) {
+        await initializeFirebase();
+    }
+    return null; // Return null since we're using the backend API instead
 }; 
