@@ -12,7 +12,7 @@ class LessonsService {
   constructor() {
     this.db = db;
     this.admin = admin;
-    this.logger = logger.child({ service: 'LessonsService' });
+    this.logger = logger;
   }
 
   /**
@@ -351,6 +351,31 @@ class LessonsService {
   }
 
   /**
+   * Format lesson data for response
+   * @param {Object} doc - Firestore document
+   * @param {Object} additionalData - Additional data to merge
+   * @returns {Object} Formatted lesson object
+   */
+  _formatLessonData(doc, additionalData = {}) {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      title: data.title || '',
+      content: data.content || '',
+      codeSample: data.codeSample || '',
+      estimatedMinutes: data.estimatedMinutes || 0,
+      hasCodeExercise: data.hasCodeExercise || false,
+      order: data.order || 0,
+      videoUrl: data.videoUrl || null,
+      courseId: data.courseId || additionalData.courseId,
+      moduleId: data.moduleId || additionalData.moduleId,
+      createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
+      updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : null,
+      ...additionalData
+    };
+  }
+
+  /**
    * Get lessons by course and module
    * @param {string} courseId - The course ID
    * @param {string} moduleId - The module ID
@@ -360,70 +385,135 @@ class LessonsService {
     const startTime = Date.now();
     
     try {
-      this.logger.lesson('Getting lessons by course and module', { courseId, moduleId });
+      this.logger.info('Getting lessons by course and module', { courseId, moduleId });
+      console.log('🔍 Checking for lessons in course:', courseId, 'module:', moduleId);
       
-      const moduleCollections = ['modules', 'module'];
-      
-      for (const moduleCollection of moduleCollections) {
-        try {
-          // Verify the module exists first
-          const moduleDoc = await this.db
+      // First try the 'modules' collection since we know that's where the data is
+      try {
+        console.log('📂 Checking modules collection...');
+        
+        // Get the module document first
+        const moduleDoc = await this.db
+          .collection('courses')
+          .doc(courseId)
+          .collection('modules')
+          .doc(moduleId)
+          .get();
+
+        if (moduleDoc.exists) {
+          console.log('✅ Found module in modules collection');
+          
+          // Get all lessons for this module
+          const lessonsSnapshot = await this.db
             .collection('courses')
             .doc(courseId)
-            .collection(moduleCollection)
+            .collection('modules')
             .doc(moduleId)
+            .collection('lessons')
+            .orderBy('order', 'asc')
             .get();
-
-          if (moduleDoc.exists) {
-            const lessonsSnapshot = await this.db
-              .collection('courses')
-              .doc(courseId)
-              .collection(moduleCollection)
-              .doc(moduleId)
-              .collection('lessons')
-              .get();
-            
-            const lessons = lessonsSnapshot.docs.map(doc => ({
-              id: doc.id,
-              source: `${moduleCollection}-nested`,
+          
+          const lessons = lessonsSnapshot.docs.map(doc => 
+            this._formatLessonData(doc, {
+              source: 'modules-nested',
               courseId,
-              moduleId,
-              ...doc.data()
-            }));
-
-            // Sort by order if available
-            lessons.sort((a, b) => (a.order || 0) - (b.order || 0));
-            
-            const duration = Date.now() - startTime;
-            this.logger.performanceMetric('getLessonsByCourseAndModule', duration, {
-              courseId,
-              moduleId,
-              moduleCollection,
-              lessonsCount: lessons.length
-            });
-            
-            this.logger.firebaseOperation('query', `${moduleCollection}/lessons`, 
-              `${courseId}/${moduleId}`, { count: lessons.length });
-            
-            return lessons;
-          }
-        } catch (error) {
-          this.logger.debug('Error checking module collection', { 
-            moduleCollection, 
-            error: error.message 
+              moduleId
+            })
+          );
+          
+          console.log(`📚 Found ${lessons.length} lessons in modules collection`);
+          
+          const duration = Date.now() - startTime;
+          this.logger.info('Retrieved lessons successfully', {
+            operation: 'getLessonsByCourseAndModule',
+            duration,
+            courseId,
+            moduleId,
+            lessonsCount: lessons.length
           });
+          
+          return lessons;
         }
+        
+        console.log('❌ Module not found in modules collection');
+      } catch (error) {
+        console.log('⚠️ Error checking modules collection:', error.message);
+        this.logger.error('Error checking modules collection', {
+          courseId,
+          moduleId,
+          error: error.message
+        });
       }
       
-      this.logger.warn('Module not found in course', { courseId, moduleId });
+      // If we didn't find it in 'modules', try 'module' collection as fallback
+      try {
+        console.log('📂 Checking module collection as fallback...');
+        
+        const moduleDoc = await this.db
+          .collection('courses')
+          .doc(courseId)
+          .collection('module')
+          .doc(moduleId)
+          .get();
+
+        if (moduleDoc.exists) {
+          console.log('✅ Found module in module collection');
+          
+          const lessonsSnapshot = await this.db
+            .collection('courses')
+            .doc(courseId)
+            .collection('module')
+            .doc(moduleId)
+            .collection('lessons')
+            .orderBy('order', 'asc')
+            .get();
+          
+          const lessons = lessonsSnapshot.docs.map(doc => 
+            this._formatLessonData(doc, {
+              source: 'module-nested',
+              courseId,
+              moduleId
+            })
+          );
+          
+          console.log(`📚 Found ${lessons.length} lessons in module collection`);
+          
+          const duration = Date.now() - startTime;
+          this.logger.info('Retrieved lessons successfully', {
+            operation: 'getLessonsByCourseAndModule',
+            duration,
+            courseId,
+            moduleId,
+            lessonsCount: lessons.length
+          });
+          
+          return lessons;
+        }
+        
+        console.log('❌ Module not found in module collection');
+      } catch (error) {
+        console.log('⚠️ Error checking module collection:', error.message);
+        this.logger.error('Error checking module collection', {
+          courseId,
+          moduleId,
+          error: error.message
+        });
+      }
+      
+      console.log('❌ Module not found in any collection');
+      this.logger.warn('Module not found in any collection', {
+        courseId,
+        moduleId
+      });
       return [];
     } catch (error) {
-      this.logger.structuredError(error, { 
+      this.logger.error('Failed to retrieve lessons', { 
         operation: 'getLessonsByCourseAndModule', 
         courseId, 
-        moduleId 
+        moduleId,
+        error: error.message
       });
-      throw new Error('Failed to retrieve lessons for course and module');
+      throw new Error(`Failed to retrieve lessons: ${error.message}`);
     }
   }
 

@@ -98,11 +98,41 @@ app.use('/api/quizzes', quizRoutes);
 app.use('/api/enrollments', enrollmentRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// ================================
-// NESTED QUIZ ROUTES
-// ================================
-
-const quizController = require('./controllers/quizController');
+// Get lessons for a module
+app.get('/api/courses/:courseId/modules/:moduleId/lessons', asyncHandler(async (req, res) => {
+    const { courseId, moduleId } = req.params;
+    console.log('🔍 Fetching lessons for course:', courseId, 'and module:', moduleId);
+    
+    try {
+        const LessonService = require('./services/firestore/lessonService');
+        const lessonService = new LessonService();
+        const lessons = await lessonService.getLessonsByCourseAndModule(courseId, moduleId);
+        
+        console.log('📦 Found lessons:', lessons.length);
+        
+        res.json({
+            success: true,
+            message: `Successfully retrieved ${lessons.length} lessons`,
+            data: lessons,
+            metadata: {
+                courseId,
+                moduleId,
+                totalLessons: lessons.length,
+                path: `/courses/${courseId}/modules/${moduleId}/lessons`
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error fetching lessons:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to fetch lessons',
+            error: {
+                code: 'LESSONS_FETCH_ERROR',
+                details: error.message
+            }
+        });
+    }
+}));
 
 // Get quizzes for a lesson
 app.get('/api/courses/:courseId/modules/:moduleId/lessons/:lessonId/quizzes', 

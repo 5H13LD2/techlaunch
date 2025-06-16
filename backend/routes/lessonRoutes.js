@@ -1,16 +1,47 @@
 const express = require('express');
 const router = express.Router();
 const logger = require('../utils/logger');
-const lessonService = require('../services/firestore/lessonService');
+const LessonService = require('../services/firestore/lessonService');
+
+// Initialize the lesson service
+const lessonService = new LessonService();
+
+// Get lessons by course and module (NEW ROUTE)
+router.get('/courses/:courseId/modules/:moduleId/lessons', async (req, res) => {
+  const { courseId, moduleId } = req.params;
+  try {
+    logger.info(`🔍 Fetching lessons for course ${courseId} and module ${moduleId}`);
+    const lessons = await lessonService.getLessonsByCourseAndModule(courseId, moduleId);
+    
+    logger.info(`📦 Found ${lessons.length} lessons`);
+    res.json({ 
+      success: true, 
+      data: lessons,
+      count: lessons.length
+    });
+  } catch (error) {
+    logger.error('❌ Failed to fetch course module lessons', { 
+      courseId, 
+      moduleId, 
+      error: error.message 
+    });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch lessons',
+      error: error.message 
+    });
+  }
+});
 
 // Get all lessons
 router.get('/', async (req, res) => {
   try {
-    logger.api('Fetching all lessons');
+    logger.info('🔍 Fetching all lessons');
     const lessons = await lessonService.getAllLessons();
+    logger.info(`📦 Found ${lessons.length} lessons`);
     res.json({ success: true, data: lessons });
   } catch (error) {
-    logger.error('Failed to fetch lessons', { error: error.message });
+    logger.error('❌ Failed to fetch lessons', { error: error.message });
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -19,11 +50,12 @@ router.get('/', async (req, res) => {
 router.get('/module/:moduleId', async (req, res) => {
   const { moduleId } = req.params;
   try {
-    logger.api(`Fetching lessons for module: ${moduleId}`);
+    logger.info(`🔍 Fetching lessons for module: ${moduleId}`);
     const lessons = await lessonService.getLessonsByModuleId(moduleId);
+    logger.info(`📦 Found ${lessons.length} lessons`);
     res.json({ success: true, data: lessons });
   } catch (error) {
-    logger.error('Failed to fetch module lessons', { 
+    logger.error('❌ Failed to fetch module lessons', { 
       moduleId, 
       error: error.message 
     });

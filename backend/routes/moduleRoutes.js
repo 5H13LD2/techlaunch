@@ -11,7 +11,10 @@ const FirestoreServices = require('../services/firestore/moduleService');
 router.get('/:courseId/modules', async (req, res) => {
     try {
         const { courseId } = req.params;
+        console.log('🔍 Fetching modules for course:', courseId);
         const modules = await FirestoreServices.getCourseModules(courseId);
+        
+        console.log('📦 Found modules:', modules.length);
         
         res.json({
             success: true,
