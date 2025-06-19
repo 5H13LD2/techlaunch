@@ -14,14 +14,13 @@
 import { initializeAuth } from './utils/api.js';
 import { dataManager } from './utils/dataManager.js';
 import { initializeNavigation } from './utils/navigation.js';
-import { initializeCourseManagement } from './utils/courseManagement.js'; // Still needed for logic triggered by navigation
-import { initializeModuleManagement } from './utils/moduleManagement.js'; // Still needed for logic triggered by navigation
-import { initializeUserManagement } from './utils/userManagement.js'; // Still needed for logic triggered by navigation
+import { initializeCourseManagement } from './utils/courseManagement.js';
+import { initializeModuleManagement } from './utils/moduleManagement.js';
+import { initializeUserManagement } from './utils/userManagement.js';
 import { showToast, handleError, updateDashboardStats } from './utils/dom.js';
-import { initializeDomHandlers } from './utils/dom-handlers.js'; // Import the new DOM handlers
-import { db, storage, auth, collection, getDocs, addDoc, doc, deleteDoc, updateDoc } from './config/firebase-config.js';
+import { initializeDomHandlers } from './utils/dom-handlers.js';
+import { db, storage, auth } from './config/firebase-config.js';
 import { signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
-import { ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
 
 // Global state
 let users = [];
@@ -298,33 +297,32 @@ const displayCourses = () => {
 // Initialize the application
 const initializeApp = async () => {
     try {
-        // Initialize Firebase Auth
+        // Initialize Firebase Auth anonymously for demo purposes
+        await signInAnonymously(auth);
+        
+        // Initialize all modules
+        await Promise.all([
+            initializeAuth(),
+            initializeNavigation(),
+            initializeCourseManagement(),
+            initializeModuleManagement(),
+            initializeUserManagement(),
+            initializeDomHandlers()
+        ]);
+        
+        // Set up auth state observer
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                currentUser = user;
-                console.log('User is signed in:', user.uid);
+                console.log('Anonymous user signed in');
             } else {
-                signInAnonymously(auth)
-                    .then((userCredential) => {
-                        currentUser = userCredential.user;
-                        console.log('Anonymous auth successful:', currentUser.uid);
-                    })
-                    .catch((error) => {
-                        console.error('Anonymous auth error:', error);
-                        showToast('Authentication failed', 'error');
-                    });
+                console.log('User signed out');
             }
         });
-
-        // Load initial data
-        await loadDashboardData();
         
-        // Set up event listeners
-        setupEventListeners();
-        
+        showToast('Application initialized successfully', 'success');
     } catch (error) {
         console.error('Error initializing app:', error);
-        showToast('Failed to initialize application', 'error');
+        handleError(error);
     }
 };
 
@@ -452,8 +450,13 @@ const populateCourseSelect = () => {
     elements.courseSelect.innerHTML = '<option value="">Select Course</option>' + options;
 };
 
-// Initialize when DOM is loaded
+// Start the application when the DOM is fully loaded
 document.addEventListener('DOMContentLoaded', initializeApp);
+
+// Export any necessary functions or variables
+export {
+    initializeApp
+};
 
 // Export functions for global access
 window.showPage = showPage;

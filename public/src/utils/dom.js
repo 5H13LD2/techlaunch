@@ -4,6 +4,32 @@
 // DOM manipulation utilities and UI helpers
 // Handles loading states, toasts, and common DOM operations
 
+// Add required CSS
+const style = document.createElement('style');
+style.textContent = `
+    .loading-spinner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+    }
+
+    .toast-container {
+        z-index: 9999;
+    }
+
+    .toast {
+        min-width: 250px;
+    }
+`;
+document.head.appendChild(style);
+
 /**
  * DOM Elements Cache
  * Cache frequently used DOM elements for better performance
@@ -56,6 +82,18 @@ export const elements = {
 export const showLoading = () => {
     if (elements.loadingSpinner) {
         elements.loadingSpinner.style.display = 'flex';
+    } else {
+        // Create spinner if it doesn't exist
+        const newSpinner = document.createElement('div');
+        newSpinner.id = 'loading-spinner';
+        newSpinner.className = 'loading-spinner';
+        newSpinner.innerHTML = `
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        `;
+        document.body.appendChild(newSpinner);
+        elements.loadingSpinner = newSpinner;
     }
 };
 
