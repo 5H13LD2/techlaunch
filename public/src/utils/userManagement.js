@@ -1,6 +1,5 @@
-import { showLoading, hideLoading, showToast } from './display.js';
+import { showLoading, hideLoading, showToast, closeModal } from './dom.js';
 import { apiCall } from './api.js';
-import { showToast as domShowToast, closeModal } from './dom.js';
 
 let users = [];
 
