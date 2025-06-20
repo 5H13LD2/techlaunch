@@ -8,9 +8,12 @@ const db = initializeFirebase();
 const userService = require('./userService');
 const courseService = require('./courseService');
 const moduleService = require('./moduleService');
-const lessonService = require('./lessonService');
+const LessonsService = require('./lessonService');
 const quizService = require('./quizServices');
 const enrollmentService = require('./enrollmentService');
+
+// Create instance of LessonsService
+const lessonService = new LessonsService();
 
 class DashboardService {
     constructor() {
@@ -23,10 +26,10 @@ class DashboardService {
     async getDashboardStats() {
         try {
             const [users, courses, modules, lessons, quizzes, enrollments] = await Promise.all([
-                userService.getAll(),
-                courseService.getAll(),
-                moduleService.getAll(),
-                lessonService.getAll(),
+                userService.getAllUsers(),
+                courseService.getAllCourses(),
+                moduleService.getAllModules(),
+                lessonService.getAllLessons(),
                 quizService.getAllQuizzes(),
                 enrollmentService.getAll()
             ]);
@@ -57,7 +60,7 @@ class DashboardService {
             };
         } catch (error) {
             this.logger.error('Error getting dashboard stats:', error);
-            throw new Error('Failed to retrieve dashboard statistics');
+            throw error;
         }
     }
 

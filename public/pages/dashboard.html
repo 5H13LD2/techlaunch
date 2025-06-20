@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TechLaunch - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/dashboard.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2>TechLaunch</h2>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="#" class="active"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="#"><i class="fas fa-users"></i> Users</a></li>
+                <li><a href="#"><i class="fas fa-book"></i> Courses</a></li>
+                <li><a href="#"><i class="fas fa-user-graduate"></i> Enrollments</a></li>
+                <li><a href="#"><i class="fas fa-cube"></i> Modules</a></li>
+                <li><a href="#"><i class="fas fa-play-circle"></i> Lessons</a></li>
+                <li><a href="#"><i class="fas fa-question-circle"></i> Quizzes</a></li>
+            </ul>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h1>Dashboard Overview</h1>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card users">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-number" id="total-users">0</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card courses">
+                    <div class="stat-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="stat-number" id="total-courses">0</div>
+                    <div class="stat-label">Total Courses</div>
+                </div>
+                <div class="stat-card enrollments">
+                    <div class="stat-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <div class="stat-number" id="total-enrollments">0</div>
+                    <div class="stat-label">Total Enrollments</div>
+                </div>
+                <div class="stat-card completion">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-number" id="completion-rate">0%</div>
+                    <div class="stat-label">Completion Rate</div>
+                </div>
+            </div>
+
+            <!-- Terminal Style Dashboard Overview -->
+            <div class="content-section dashboard-overview">
+                <div class="terminal-header">
+                    <div class="terminal-title">DASHBOARD_OVERVIEW</div>
+                    <div class="terminal-controls">
+                        <button class="terminal-btn" id="copy-btn">Copy</button>
+                        <button class="terminal-btn" id="edit-btn">Edit</button>
+                    </div>
+                </div>
+                <div class="terminal-content">
+                    <div class="terminal-section">
+                        <h4>📊 OVERVIEW</h4>
+                        <div class="terminal-stats">
+                            <div class="terminal-stat">
+                                <div class="terminal-stat-value" id="terminal-users">0</div>
+                                <div class="terminal-stat-label">Users</div>
+                            </div>
+                            <div class="terminal-stat">
+                                <div class="terminal-stat-value" id="terminal-courses">0</div>
+                                <div class="terminal-stat-label">Courses</div>
+                            </div>
+                            <div class="terminal-stat">
+                                <div class="terminal-stat-value" id="terminal-enrolled">0</div>
+                                <div class="terminal-stat-label">Enrolled</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="terminal-section">
+                        <h4>🎯 ACTIVE LEARNERS</h4>
+                        <div id="active-learners-content">Loading...</div>
+                    </div>
+
+                    <div class="terminal-section">
+                        <h4>🏆 USER MILESTONES</h4>
+                        <div id="user-milestones">Loading...</div>
+                    </div>
+
+                    <div class="terminal-section">
+                        <h4>📈 RECENT ACTIVITY LOG</h4>
+                        <div id="terminal-activity-log">
+                            <div>Loading recent activities...</div>
+                        </div>
+                    </div>
+
+                    <div class="terminal-section">
+                        <h4>📚 COURSE SNAPSHOT</h4>
+                        <div id="course-snapshot" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                            <div>Loading course data...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="content-grid">
+                <!-- Recent Activity -->
+                <div class="content-section">
+                    <div class="section-header">
+                        <h3>Recent Activity</h3>
+                    </div>
+                    <div class="section-content">
+                        <div class="loading" id="activity-loading">
+                            <div class="spinner"></div>
+                            <p>Loading recent activity...</p>
+                        </div>
+                        <div id="activity-list">
+                            <!-- Activity items will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Latest Users -->
+                <div class="content-section">
+                    <div class="section-header">
+                        <div class="users-header">
+                            <h3>Latest Users</h3>
+                            <button class="add-user-btn" id="add-user-btn">
+                                <i class="fas fa-plus"></i> Add User
+                            </button>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                        <div class="loading" id="users-loading">
+                            <div class="spinner"></div>
+                            <p>Loading users...</p>
+                        </div>
+                        <table class="users-table" id="users-table">
+                            <thead>
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="users-table-body">
+                                <!-- Users will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="scripts/managers/dashboard.js"></script>
+</body>
+</html>

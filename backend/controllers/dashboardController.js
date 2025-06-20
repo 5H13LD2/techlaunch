@@ -1,5 +1,5 @@
-const dashboardService = require('../services/dashboardService');
-const logger = require('../../utils/logger');
+const dashboardService = require('../services/firestore/dashboardService');
+const logger = require('../utils/logger');
 
 class DashboardController {
     constructor() {
